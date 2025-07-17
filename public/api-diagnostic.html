@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API服务器诊断工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .service-check {
+            margin: 15px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .service-name {
+            font-weight: bold;
+            color: #2196F3;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            color: white;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status.online {
+            background-color: #4CAF50;
+        }
+        .status.offline {
+            background-color: #f44336;
+        }
+        .status.checking {
+            background-color: #ff9800;
+        }
+        .url {
+            font-family: monospace;
+            color: #666;
+            margin: 5px 0;
+        }
+        .details {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 API服务器诊断工具</h1>
+        
+        <div id="services-status">
+            <!-- 服务器状态将在这里显示 -->
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="checkAllServices()">🔄 检查所有服务</button>
+            <button onclick="testApiEndpoints()">🧪 测试API端点</button>
+            <button onclick="clearResults()">🗑️ 清除结果</button>
+        </div>
+        
+        <div id="test-results" class="test-results" style="display: none;">
+            <h3>测试结果:</h3>
+            <div id="results-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // API配置 (复制自项目中的配置)
+        const API_CONFIG = {
+            'StockDashboard': {
+                baseURL: 'http://localhost:5001',
+                name: '股票数据服务',
+                port: 5001
+            },
+            'StockDashboard_strong': {
+                baseURL: 'http://localhost:5002',
+                name: '强势股票数据服务',
+                port: 5002
+            },
+            'StockDashboard_multi_plate': {
+                baseURL: 'http://localhost:5003',
+                name: '多板块数据服务',
+                port: 5003
+            }
+        };
+
+        // 检查单个服务状态
+        async function checkService(serviceName, config) {
+            const statusElement = document.getElementById(`status-${serviceName}`);
+            const detailsElement = document.getElementById(`details-${serviceName}`);
+            
+            statusElement.textContent = '检查中...';
+            statusElement.className = 'status checking';
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(`${config.baseURL}/api/dashboard-config`, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    statusElement.textContent = '在线';
+                    statusElement.className = 'status online';
+                    detailsElement.textContent = `✅ 服务正常运行`;
+                } else {
+                    statusElement.textContent = '异常';
+                    statusElement.className = 'status offline';
+                    detailsElement.textContent = `❌ HTTP ${response.status}: ${response.statusText}`;
+                }
+            } catch (error) {
+                statusElement.textContent = '离线';
+                statusElement.className = 'status offline';
+                if (error.name === 'AbortError') {
+                    detailsElement.textContent = '❌ 连接超时 (5秒)';
+                } else {
+                    detailsElement.textContent = `❌ ${error.message}`;
+                }
+            }
+        }
+
+        // 渲染服务状态列表
+        function renderServices() {
+            const container = document.getElementById('services-status');
+            container.innerHTML = '';
+            
+            Object.entries(API_CONFIG).forEach(([serviceName, config]) => {
+                const serviceDiv = document.createElement('div');
+                serviceDiv.className = 'service-check';
+                serviceDiv.innerHTML = `
+                    <div class="service-name">${config.name} (${serviceName})</div>
+                    <div class="url">📍 ${config.baseURL}</div>
+                    <div class="status checking" id="status-${serviceName}">未检查</div>
+                    <div class="details" id="details-${serviceName}">点击"检查所有服务"开始检查</div>
+                `;
+                container.appendChild(serviceDiv);
+            });
+        }
+
+        // 检查所有服务
+        async function checkAllServices() {
+            const promises = Object.entries(API_CONFIG).map(([serviceName, config]) => 
+                checkService(serviceName, config)
+            );
+            await Promise.all(promises);
+        }
+
+        // 测试API端点
+        async function testApiEndpoints() {
+            const resultsContainer = document.getElementById('test-results');
+            const resultsContent = document.getElementById('results-content');
+            
+            resultsContainer.style.display = 'block';
+            resultsContent.innerHTML = '<div>🔄 正在测试API端点...</div>';
+            
+            const results = [];
+            
+            for (const [serviceName, config] of Object.entries(API_CONFIG)) {
+                results.push(`<h4>${config.name} (${serviceName})</h4>`);
+                
+                const endpoints = [
+                    '/api/dashboard-config',
+                    '/api/table-data/plates',
+                    '/api/table-data/stocks',
+                    '/api/chart-data/stock-line-chart'
+                ];
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 3000);
+                        
+                        const response = await fetch(`${config.baseURL}${endpoint}`, {
+                            method: 'GET',
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            results.push(`✅ ${endpoint} - 数据长度: ${JSON.stringify(data).length}`);
+                        } else {
+                            results.push(`❌ ${endpoint} - HTTP ${response.status}`);
+                        }
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            results.push(`⏰ ${endpoint} - 超时`);
+                        } else {
+                            results.push(`❌ ${endpoint} - ${error.message}`);
+                        }
+                    }
+                }
+                results.push('<br>');
+            }
+            
+            resultsContent.innerHTML = results.join('<br>');
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('test-results').style.display = 'none';
+        }
+
+        // 页面加载时初始化
+        window.onload = function() {
+            renderServices();
+            
+            // 添加当前页面信息
+            const currentUrl = window.location.href;
+            console.log('当前页面URL:', currentUrl);
+            
+            // 检查当前路由对应的服务
+            if (currentUrl.includes('stock-dashboard_multi_plate')) {
+                console.log('当前应该使用: StockDashboard_multi_plate (端口5003)');
+            } else if (currentUrl.includes('stock-dashboard_strong')) {
+                console.log('当前应该使用: StockDashboard_strong (端口5002)');
+            } else if (currentUrl.includes('stock-dashboard')) {
+                console.log('当前应该使用: StockDashboard (端口5001)');
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+
+# Python virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Python cache and compiled files
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+.coverage.*
+htmlcov/
+.cache
+nosetests.xml
+coverage/
+
+# Vue.js / Frontend
+dist/
+.temp/
+.cache/
+.parcel-cache/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Backup files
+backup/
+*.backup
+*.bak
+project-config.backup.*.json
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# API keys and configuration (if any)
+config/local.json
+config/production.json
+secrets/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pyenv
+.python-version
+
+# Application specific
+# Add any project-specific files here
+
+# Project-specific ignores
+# Auto-generated configuration backups
+project-config.backup.*.json
+
+# Development and test files (auto-generated)
+test_ports.py
+
+# Optional: Uncomment these if you want to ignore auto-generated files
+# auto-config-generator.py
+# init-config.py
+# quick-add-page.py
+
+# Documentation files that might be generated
+# CONFIG_MANAGEMENT_GUIDE.md
+# CONTRIBUTORS.md
+
+# Chinese filename files (if they exist)
+*中文*
+*概念*
+*板块*
+
+# Keep these important files - they are part of the project
+# start-all-services.bat
+# start-all-services.sh
+
+# Build output
+dist/
+build/
+
+# Logs and debugging
+*.log
+debug_*.py
+
+# VS Code specific settings (optional - remove if you want to share VS Code settings)
+.vscode/settings.json
+.vscode/launch.json
+
+# Optional: Remove these lines if you want to commit VS Code configuration
+# .vscode/tasks.json

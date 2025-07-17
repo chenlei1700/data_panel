@@ -1,0 +1,74 @@
+// vue.config.js 配置模板
+// 当添加新的后端服务器时，参考此模板更新代理配置
+
+module.exports = {
+  publicPath: '/',
+  devServer: {
+    port: 8081,  // 前端开发服务器端口
+    proxy: {
+      // 主要API服务器 (默认服务器)
+      '/api': {
+        target: 'http://localhost:5004',
+        changeOrigin: true,
+        logLevel: 'debug'  // 开启调试日志
+      },
+      
+      // 示例：多板块服务器
+      '/api/multiplate': {
+        target: 'http://localhost:5003',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api/multiplate': '/api'  // 去掉 /multiplate 前缀
+        }
+      },
+      
+      // 示例：强势股服务器
+      '/api/strong': {
+        target: 'http://localhost:5002',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api/strong': '/api'  // 去掉 /strong 前缀
+        }
+      }
+      
+      // 新增服务器配置模板（复制并修改）：
+      // '/api/your-service-name': {
+      //   target: 'http://localhost:XXXX',  // 替换为实际端口
+      //   changeOrigin: true,
+      //   pathRewrite: {
+      //     '^/api/your-service-name': '/api'  // 路径重写规则
+      //   }
+      // }
+    }
+  }
+}
+
+/*
+配置说明：
+
+1. 路径匹配优先级
+   - 更具体的路径要放在前面
+   - '/api/specific' 要在 '/api' 之前
+
+2. target 配置
+   - 指向后端服务器的实际地址和端口
+   - 必须与 project-config.json 中的端口一致
+
+3. changeOrigin: true
+   - 修改请求头的 Host 字段
+   - 解决跨域问题
+
+4. pathRewrite
+   - 重写请求路径
+   - 去掉前端特有的路径前缀
+   - 让后端收到标准的 API 路径
+
+5. 使用示例：
+   前端调用: axios.get('/api/multiplate/table-data/stocks')
+   实际转发: GET http://localhost:5003/api/table-data/stocks
+
+6. 重要提醒：
+   - 修改此文件后必须重启前端服务 (npm run serve)
+   - 此文件不会被 auto-config-generator.py 自动更新
+   - 每次添加新服务器都需要手动更新此文件
+*/

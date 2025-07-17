@@ -1,0 +1,41 @@
+# 使用官方 Python 基础镜像
+FROM python:3.9-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 设置环境变量
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制 requirements 文件
+COPY requirements.txt .
+
+# 安装 Python 依赖
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制项目文件
+COPY api/ ./api/
+COPY stock_data/ ./stock_data/
+COPY strategy/ ./strategy/
+
+# 暴露端口
+EXPOSE 5001 5002 5003
+
+# 创建启动脚本
+RUN echo '#!/bin/bash\n\
+echo "Starting Stock Dashboard API Services..."\n\
+python api/show_plate_server.py &\n\
+python api/show_plate_server_strong.py &\n\
+python api/show_plate_server_multiplate.py &\n\
+wait\n\
+' > start-services.sh && chmod +x start-services.sh
+
+# 启动命令
+CMD ["./start-services.sh"]

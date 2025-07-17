@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>前端调试测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>前端数据获取调试</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function debugFrontendAPIs() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>开始测试...</h2>';
+            
+            try {
+                // 测试1: 检查API配置
+                console.log('测试API配置...');
+                const apiConfigModule = await import('http://localhost:8082/src/config/api.js');
+                console.log('API配置模块:', apiConfigModule);
+                
+                // 测试2: 直接测试demo_1服务配置
+                console.log('测试demo_1服务配置...');
+                const demo1Config = apiConfigModule.API_CONFIG.demo_1;
+                console.log('demo_1配置:', demo1Config);
+                
+                // 测试3: 测试getApiUrl函数
+                const baseURL = apiConfigModule.getApiUrl('demo_1');
+                console.log('demo_1 baseURL:', baseURL);
+                
+                // 测试4: 测试具体的API端点
+                const stockListURL = baseURL + '/api/table-data/stock-list';
+                console.log('股票列表URL:', stockListURL);
+                
+                const response = await axios.get(stockListURL);
+                console.log('股票数据响应:', response.data);
+                
+                resultsDiv.innerHTML = `
+                    <h2>✅ 测试成功</h2>
+                    <h3>API配置:</h3>
+                    <pre>${JSON.stringify(demo1Config, null, 2)}</pre>
+                    <h3>BaseURL:</h3>
+                    <p>${baseURL}</p>
+                    <h3>股票数据:</h3>
+                    <pre>${JSON.stringify(response.data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('调试测试失败:', error);
+                resultsDiv.innerHTML = `
+                    <h2>❌ 测试失败</h2>
+                    <p>错误: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+        
+        // 页面加载后立即测试
+        window.onload = debugFrontendAPIs;
+    </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API 测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>API 测试页面</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAPIs() {
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                console.log('测试仪表盘配置API...');
+                const configResponse = await axios.get('http://localhost:5004/api/dashboard-config');
+                console.log('配置API响应:', configResponse.data);
+                resultsDiv.innerHTML += '<h2>仪表盘配置 ✅</h2><pre>' + JSON.stringify(configResponse.data, null, 2) + '</pre>';
+                
+                console.log('测试股票列表API...');
+                const stockResponse = await axios.get('http://localhost:5004/api/table-data/stock-list');
+                console.log('股票列表API响应:', stockResponse.data);
+                resultsDiv.innerHTML += '<h2>股票列表数据 ✅</h2><pre>' + JSON.stringify(stockResponse.data, null, 2) + '</pre>';
+                
+                console.log('测试图表数据API...');
+                const chartResponse = await axios.get('http://localhost:5004/api/chart-data/stock-trend');
+                console.log('图表API响应:', chartResponse.data);
+                resultsDiv.innerHTML += '<h2>图表数据 ✅</h2><pre>' + JSON.stringify(chartResponse.data, null, 2) + '</pre>';
+                
+            } catch (error) {
+                console.error('API测试失败:', error);
+                resultsDiv.innerHTML += '<h2>❌ 错误</h2><pre>' + JSON.stringify(error.message, null, 2) + '</pre>';
+            }
+        }
+        
+        // 页面加载后立即测试
+        window.onload = testAPIs;
+    </script>
+</body>
+</html>

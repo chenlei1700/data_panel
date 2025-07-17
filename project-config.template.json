@@ -1,0 +1,38 @@
+{
+  "projectInfo": {
+    "name": "股票仪表盘系统",
+    "description": "实时股票数据分析与可视化平台",
+    "version": "1.0.0",
+    "basePort": 5001,
+    "frontendPort": 8080,
+    "pythonExecutable": "python"
+  },
+  "services": [
+    {
+      "id": "StockDashboard_demo",
+      "name": "演示仪表盘",
+      "description": "使用模拟数据的完整功能演示",
+      "icon": "🎯",
+      "port": 5004,
+      "path": "/stock-dashboard-demo",
+      "title": "股票仪表盘演示",
+      "serverFile": "show_plate_server_demo.py",
+      "component": "StockDashboard",
+      "taskLabel": "演示服务器",
+      "enabled": true
+    }
+  ],
+  "apiEndpoints": {
+    "dashboardConfig": "/api/dashboard-config",
+    "chartData": "/api/chart-data",
+    "tableData": "/api/table-data",
+    "updates": "/api/dashboard/updates",
+    "health": "/health"
+  },
+  "developmentConfig": {
+    "pythonPath": "python",
+    "apiBasePath": "./api",
+    "autoOpenBrowser": true,
+    "enableHotReload": true
+  }
+}

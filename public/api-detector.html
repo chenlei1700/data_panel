@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API调用检测器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .test-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2196F3;
+            margin-bottom: 15px;
+        }
+        .api-call {
+            margin: 10px 0;
+            padding: 15px;
+            background: #f0f8ff;
+            border-left: 4px solid #2196F3;
+            border-radius: 5px;
+        }
+        .api-url {
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+            font-weight: bold;
+            word-break: break-all;
+        }
+        .api-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-pending { background-color: #ffc107; color: #212529; }
+        button {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+        .results {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background: white;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .route-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .config-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 多板块API调用检测器</h1>
+        
+        <div class="route-info">
+            <h3>📍 当前路由信息</h3>
+            <div id="route-display">加载中...</div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 API端点测试</div>
+            <button onclick="testAllAPIs()">测试所有API</button>
+            <button onclick="testSpecificPort(5001)">测试端口5001</button>
+            <button onclick="testSpecificPort(5002)">测试端口5002</button>
+            <button onclick="testSpecificPort(5003)">测试端口5003</button>
+            <button onclick="clearResults()">清除结果</button>
+            
+            <div id="api-results" class="results" style="display: none;">
+                <div id="results-content"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">⚙️ 前端配置检查</div>
+            <button onclick="checkFrontendConfig()">检查前端配置</button>
+            <button onclick="simulateRouteCall()">模拟路由调用</button>
+            
+            <div id="config-results" class="results" style="display: none;">
+                <div id="config-content"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📡 实时网络监控</div>
+            <button onclick="startNetworkMonitoring()">开始监控</button>
+            <button onclick="stopNetworkMonitoring()">停止监控</button>
+            
+            <div id="network-results" class="results" style="display: none;">
+                <div id="network-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_CONFIG = {
+            'StockDashboard': {
+                baseURL: 'http://localhost:5001',
+                name: '股票数据服务'
+            },
+            'StockDashboard_strong': {
+                baseURL: 'http://localhost:5002',
+                name: '强势股票数据服务'
+            },
+            'StockDashboard_multi_plate': {
+                baseURL: 'http://localhost:5003',
+                name: '多板块数据服务'
+            }
+        };
+
+        let originalFetch = null;
+        let networkMonitoring = false;
+
+        // 显示当前路由信息
+        function displayRouteInfo() {
+            const routeDisplay = document.getElementById('route-display');
+            const currentPath = window.location.pathname;
+            const currentHash = window.location.hash;
+            
+            let expectedService = 'StockDashboard'; // 默认
+            if (currentPath.includes('stock-dashboard_multi_plate')) {
+                expectedService = 'StockDashboard_multi_plate';
+            } else if (currentPath.includes('stock-dashboard_strong')) {
+                expectedService = 'StockDashboard_strong';
+            } else if (currentPath.includes('stock-dashboard')) {
+                expectedService = 'StockDashboard';
+            }
+
+            routeDisplay.innerHTML = `
+                <strong>URL路径:</strong> ${currentPath}<br>
+                <strong>Hash:</strong> ${currentHash}<br>
+                <strong>预期服务:</strong> ${expectedService} (${API_CONFIG[expectedService].baseURL})<br>
+                <strong>时间:</strong> ${new Date().toLocaleString()}
+            `;
+        }
+
+        // 测试单个API端点
+        async function testAPI(url, label) {
+            const resultDiv = document.getElementById('results-content');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'api-call';
+            testDiv.innerHTML = `
+                <div class="api-url">${url}</div>
+                <span class="api-status status-pending">测试中...</span>
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            resultDiv.appendChild(testDiv);
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const statusSpan = testDiv.querySelector('.api-status');
+                if (response.ok) {
+                    statusSpan.textContent = `✅ 成功 (${response.status})`;
+                    statusSpan.className = 'api-status status-success';
+                    
+                    // 尝试解析JSON响应
+                    try {
+                        const data = await response.json();
+                        const dataInfo = document.createElement('div');
+                        dataInfo.innerHTML = `<small>响应数据大小: ${JSON.stringify(data).length} 字符</small>`;
+                        testDiv.appendChild(dataInfo);
+                    } catch (e) {
+                        // 忽略JSON解析错误
+                    }
+                } else {
+                    statusSpan.textContent = `❌ 失败 (${response.status})`;
+                    statusSpan.className = 'api-status status-error';
+                }
+            } catch (error) {
+                const statusSpan = testDiv.querySelector('.api-status');
+                if (error.name === 'AbortError') {
+                    statusSpan.textContent = '⏰ 超时';
+                } else {
+                    statusSpan.textContent = `❌ ${error.message}`;
+                }
+                statusSpan.className = 'api-status status-error';
+            }
+        }
+
+        // 测试所有API
+        async function testAllAPIs() {
+            const resultsDiv = document.getElementById('api-results');
+            const contentDiv = document.getElementById('results-content');
+            
+            resultsDiv.style.display = 'block';
+            contentDiv.innerHTML = '<h4>🔄 开始测试所有API端点...</h4>';
+
+            const endpoints = [
+                '/api/dashboard-config',
+                '/api/table-data/plates', 
+                '/api/table-data/stocks',
+                '/api/chart-data/stock-line-chart'
+            ];
+
+            for (const [serviceName, config] of Object.entries(API_CONFIG)) {
+                contentDiv.innerHTML += `<h4>🔧 ${config.name} (${serviceName})</h4>`;
+                
+                for (const endpoint of endpoints) {
+                    const url = `${config.baseURL}${endpoint}`;
+                    await testAPI(url, `${serviceName}${endpoint}`);
+                }
+            }
+            
+            contentDiv.innerHTML += '<h4>✅ 测试完成!</h4>';
+        }
+
+        // 测试特定端口
+        async function testSpecificPort(port) {
+            const resultsDiv = document.getElementById('api-results');
+            const contentDiv = document.getElementById('results-content');
+            
+            resultsDiv.style.display = 'block';
+            contentDiv.innerHTML = `<h4>🔄 测试端口 ${port}...</h4>`;
+
+            const baseURL = `http://localhost:${port}`;
+            const endpoints = [
+                '/api/dashboard-config',
+                '/api/table-data/plates',
+                '/api/table-data/stocks'
+            ];
+
+            for (const endpoint of endpoints) {
+                const url = `${baseURL}${endpoint}`;
+                await testAPI(url, `Port${port}${endpoint}`);
+            }
+        }
+
+        // 检查前端配置
+        function checkFrontendConfig() {
+            const resultsDiv = document.getElementById('config-results');
+            const contentDiv = document.getElementById('config-content');
+            
+            resultsDiv.style.display = 'block';
+            contentDiv.innerHTML = '<h4>⚙️ 前端配置检查结果</h4>';
+
+            // 模拟前端API配置检查
+            const currentPath = window.location.pathname;
+            let routeName = 'StockDashboard';
+            
+            if (currentPath.includes('stock-dashboard_multi_plate')) {
+                routeName = 'StockDashboard_multi_plate';
+            } else if (currentPath.includes('stock-dashboard_strong')) {
+                routeName = 'StockDashboard_strong';
+            }
+
+            const config = API_CONFIG[routeName];
+            
+            contentDiv.innerHTML += `
+                <div class="config-display">
+当前路由: ${currentPath}
+映射服务: ${routeName}
+配置信息: ${JSON.stringify(config, null, 2)}
+
+预期API调用:
+- 配置端点: ${config.baseURL}/api/dashboard-config
+- 表格端点: ${config.baseURL}/api/table-data/*
+- 图表端点: ${config.baseURL}/api/chart-data/*
+                </div>
+            `;
+        }
+
+        // 模拟路由API调用
+        async function simulateRouteCall() {
+            const contentDiv = document.getElementById('config-content');
+            contentDiv.innerHTML += '<h4>🧪 模拟当前路由的API调用</h4>';
+
+            const currentPath = window.location.pathname;
+            let routeName = 'StockDashboard';
+            
+            if (currentPath.includes('stock-dashboard_multi_plate')) {
+                routeName = 'StockDashboard_multi_plate';
+            } else if (currentPath.includes('stock-dashboard_strong')) {
+                routeName = 'StockDashboard_strong';
+            }
+
+            const config = API_CONFIG[routeName];
+            const configUrl = `${config.baseURL}/api/dashboard-config`;
+            
+            contentDiv.innerHTML += `<p>🔗 调用: ${configUrl}</p>`;
+            
+            try {
+                const response = await fetch(configUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    contentDiv.innerHTML += `<p>✅ 成功获取配置</p>`;
+                    contentDiv.innerHTML += `<div class="config-display">${JSON.stringify(data, null, 2)}</div>`;
+                } else {
+                    contentDiv.innerHTML += `<p>❌ 配置获取失败: ${response.status}</p>`;
+                }
+            } catch (error) {
+                contentDiv.innerHTML += `<p>❌ 网络错误: ${error.message}</p>`;
+            }
+        }
+
+        // 开始网络监控
+        function startNetworkMonitoring() {
+            if (networkMonitoring) return;
+            
+            const resultsDiv = document.getElementById('network-results');
+            const contentDiv = document.getElementById('network-content');
+            
+            resultsDiv.style.display = 'block';
+            contentDiv.innerHTML = '<h4>📡 网络监控已开始</h4>';
+            
+            // 保存原始fetch
+            if (!originalFetch) {
+                originalFetch = window.fetch;
+            }
+            
+            // 拦截fetch请求
+            window.fetch = function(...args) {
+                const url = args[0];
+                const options = args[1] || {};
+                
+                // 记录请求
+                contentDiv.innerHTML += `
+                    <div class="api-call">
+                        <div class="api-url">📤 ${options.method || 'GET'} ${url}</div>
+                        <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                `;
+                
+                // 调用原始fetch并监控响应
+                return originalFetch.apply(this, args)
+                    .then(response => {
+                        contentDiv.innerHTML += `
+                            <div class="api-call">
+                                <div class="api-url">📥 响应 ${url}</div>
+                                <span class="api-status ${response.ok ? 'status-success' : 'status-error'}">
+                                    ${response.status} ${response.statusText}
+                                </span>
+                                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                            </div>
+                        `;
+                        resultsDiv.scrollTop = resultsDiv.scrollHeight;
+                        return response;
+                    })
+                    .catch(error => {
+                        contentDiv.innerHTML += `
+                            <div class="api-call">
+                                <div class="api-url">❌ 错误 ${url}</div>
+                                <span class="api-status status-error">${error.message}</span>
+                                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+                            </div>
+                        `;
+                        resultsDiv.scrollTop = resultsDiv.scrollHeight;
+                        throw error;
+                    });
+            };
+            
+            networkMonitoring = true;
+            contentDiv.innerHTML += '<p>✅ 监控已激活，现在可以执行操作查看API调用...</p>';
+        }
+
+        // 停止网络监控
+        function stopNetworkMonitoring() {
+            if (originalFetch) {
+                window.fetch = originalFetch;
+                networkMonitoring = false;
+                
+                const contentDiv = document.getElementById('network-content');
+                contentDiv.innerHTML += '<p>🛑 网络监控已停止</p>';
+            }
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('results-content').innerHTML = '';
+            document.getElementById('config-content').innerHTML = '';
+            document.getElementById('network-content').innerHTML = '';
+            document.getElementById('api-results').style.display = 'none';
+            document.getElementById('config-results').style.display = 'none';
+            document.getElementById('network-results').style.display = 'none';
+        }
+
+        // 页面加载时初始化
+        window.onload = function() {
+            displayRouteInfo();
+            console.log('🔍 API调用检测器已加载');
+            console.log('当前URL:', window.location.href);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Core Backend Dependencies
+Flask==2.3.3
+Flask-CORS==4.0.0
+pandas==2.0.3
+numpy==1.24.3
+plotly==5.17.0
+python-dateutil==2.8.2
+pytz==2023.3
+requests==2.31.0
+
+# Development and Testing Dependencies
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+aiohttp>=3.8.0
+coverage>=7.0.0
+
+# Code Quality
+flake8>=6.0.0
+black>=23.0.0
+isort>=5.12.0
+
+# Documentation
+sphinx>=6.0.0
+sphinx-rtd-theme>=1.2.0
+
+# Performance Monitoring
+psutil>=5.9.0
+memory-profiler>=0.60.0
