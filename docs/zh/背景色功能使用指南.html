@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableComponent 背景色功能测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            background: #fafbfc;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .highlight {
+            background: #ffeaa7;
+            padding: 15px;
+            border-left: 4px solid #fdcb6e;
+            margin: 15px 0;
+        }
+        .color-demo {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 1px solid #ddd;
+        }
+        .heatmap { background: linear-gradient(to right, rgba(255,255,255,0.1), rgba(255,0,0,0.8)); }
+        .redgreen-pos { background: rgba(0,255,0,0.3); }
+        .redgreen-neg { background: rgba(255,0,0,0.3); }
+        .percentage { background: linear-gradient(to right, rgba(255,0,0,0.3), rgba(255,255,0,0.3), rgba(0,255,0,0.3)); }
+        .rank { background: linear-gradient(to right, rgba(100,100,255,0.3), rgba(200,200,255,0.6)); }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 10px 10px 0;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #2980b9;
+        }
+        .steps {
+            list-style: none;
+            padding: 0;
+        }
+        .steps li {
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 TableComponent 背景色功能使用指南</h1>
+        
+        <div class="section">
+            <h2>📖 功能概述</h2>
+            <p>TableComponent 现在支持为表格的每一列设置动态背景色，通过指定的计算函数来为每个单元格设定不同的背景色。这个功能可以用来创建热力图、突出显示重要数据、或者根据数值范围进行可视化展示。</p>
+        </div>
+
+        <div class="section">
+            <h2>🎯 配置位置</h2>
+            <div class="highlight">
+                <strong>重要：</strong> 背景色配置应该添加在<strong>服务器端的表格数据 API</strong> 中，而不是前端组件中。
+            </div>
+            
+            <h3>1. 服务器端配置（推荐）</h3>
+            <p>在你的 API 端点中，修改返回的列配置：</p>
+            <div class="code-block">// 文件：show_plate_server.py
+@app.route('/api/table-data/plate_info', methods=['GET'])
+def get_plate_info_table_data():
+    # ...数据处理...
+    
+    columns = [
+        {"field": "板块名", "header": "板块名"},
+        {"field": "板块涨幅", "header": "板块涨幅", "backgroundColor": "redGreen"},
+        {"field": "板块量比", "header": "板块量比", "backgroundColor": "heatmap"},
+        {"field": "强势分时换手占比", "header": "强势分时换手占比", "backgroundColor": "percentage"}
+    ]
+    
+    return jsonify({
+        "columns": columns,
+        "rows": rows
+    })</div>
+
+            <h3>2. 前端组件配置（备选）</h3>
+            <p>如果需要在前端直接配置，可以使用 apiData 方式：</p>
+            <div class="code-block">// 在 Vue 组件中
+const tableConfig = ref({
+  id: 'my-table',
+  apiData: {
+    columns: [
+      { field: 'name', header: '股票名称' },
+      { field: 'price', header: '价格', backgroundColor: 'heatmap' },
+      { field: 'change', header: '涨跌幅', backgroundColor: 'redGreen' }
+    ],
+    rows: [
+      // 数据行...
+    ]
+  }
+});</div>
+        </div>
+
+        <div class="section">
+            <h2>🌈 内置背景色函数</h2>
+            
+            <h3>1. <span class="color-demo heatmap"></span>heatmap - 热力图</h3>
+            <p>根据数值大小显示不同深度的红色，值越大颜色越深。</p>
+            <div class="code-block">{"field": "price", "header": "价格", "backgroundColor": "heatmap"}</div>
+            
+            <h3>2. <span class="color-demo redgreen-pos"></span><span class="color-demo redgreen-neg"></span>redGreen - 红绿色阶</h3>
+            <p>正值显示绿色，负值显示红色，绝对值越大颜色越深。</p>
+            <div class="code-block">{"field": "change", "header": "涨跌幅", "backgroundColor": "redGreen"}</div>
+            
+            <h3>3. <span class="color-demo percentage"></span>percentage - 百分比色阶</h3>
+            <p>适用于百分比数据，从红色(-100%)到黄色(0%)到绿色(+100%)的渐变。</p>
+            <div class="code-block">{"field": "changePercent", "header": "涨跌幅(%)", "backgroundColor": "percentage"}</div>
+            
+            <h3>4. <span class="color-demo rank"></span>rank - 等级色阶</h3>
+            <p>根据该列中数值的排名显示蓝色色阶，排名越高颜色越深。</p>
+            <div class="code-block">{"field": "volume", "header": "成交量", "backgroundColor": "rank"}</div>
+        </div>
+
+        <div class="section">
+            <h2>⚙️ 如何使用</h2>
+            <ol class="steps">
+                <li><strong>步骤 1：</strong> 找到你的表格数据 API 文件（如 show_plate_server.py）</li>
+                <li><strong>步骤 2：</strong> 在表格数据返回的 columns 配置中添加 backgroundColor 属性</li>
+                <li><strong>步骤 3：</strong> 选择合适的内置函数（heatmap、redGreen、percentage、rank）</li>
+                <li><strong>步骤 4：</strong> 重启服务器并刷新页面查看效果</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>🔧 自定义背景色函数</h2>
+            <p>如果内置函数不能满足需求，你可以在前端创建自定义函数：</p>
+            <div class="code-block">const customColorFunction = (value, column, row, allRows) => {
+  // value: 当前单元格的值
+  // column: 列配置信息
+  // row: 当前行的所有数据
+  // allRows: 所有行的数据数组
+  
+  if (column.field === 'price') {
+    const numValue = parseFloat(value);
+    if (numValue > 50) return 'rgba(255, 215, 0, 0.3)'; // 金色
+    if (numValue > 30) return 'rgba(0, 255, 0, 0.3)';   // 绿色
+    if (numValue > 20) return 'rgba(255, 255, 0, 0.3)'; // 黄色
+    return 'rgba(255, 165, 0, 0.3)';                    // 橙色
+  }
+  
+  return 'transparent';
+};
+
+// 使用自定义函数
+{ 
+  field: 'price', 
+  header: '价格', 
+  backgroundColor: customColorFunction 
+}</div>
+        </div>
+
+        <div class="section">
+            <h2>📁 相关文件位置</h2>
+            <ul>
+                <li><strong>服务器配置：</strong> <code>strategy/show_pic_dateframe/vue-project/api/show_plate_server.py</code></li>
+                <li><strong>组件文件：</strong> <code>src/components/dashboard/TableComponent.vue</code></li>
+                <li><strong>使用示例：</strong> <code>src/components/dashboard/TableComponentExample.vue</code></li>
+                <li><strong>说明文档：</strong> <code>src/components/dashboard/README_背景色功能.md</code></li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🚀 快速测试</h2>
+            <p>已经为你配置了以下表格的背景色效果：</p>
+            <ul>
+                <li><strong>板块概要数据表：</strong> 板块涨幅、板块量比等列已配置背景色</li>
+                <li><strong>股票数据表：</strong> 涨幅、换手率、连板数等列已配置背景色</li>
+            </ul>
+            
+            <a href="http://localhost:8080" class="button" target="_blank">🔗 打开 Vue 应用查看效果</a>
+            <a href="http://localhost:5001" class="button" target="_blank">🔗 测试 API 数据</a>
+        </div>
+
+        <div class="section">
+            <h2>⚠️ 注意事项</h2>
+            <ul>
+                <li><strong>性能：</strong> 背景色函数会为每个单元格调用，确保函数逻辑简单高效</li>
+                <li><strong>数据类型：</strong> 确保数据类型符合计算函数的预期</li>
+                <li><strong>颜色格式：</strong> 返回的颜色值应该是有效的CSS颜色格式</li>
+                <li><strong>服务器重启：</strong> 修改服务器端配置后需要重启服务器</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
