@@ -1,0 +1,821 @@
+<!DOCTYPE html><html><head>
+      <title>README-zh</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\adam\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.18\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      <script type="text/javascript" src="file:///c:\Users\adam\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.18\crossnote\dependencies\mermaid\mermaid.min.js" charset="UTF-8"></script>
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. --><script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script></head><body for="html-export">
+    
+    
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="-数据可视化系统">📈 数据可视化系统 </h1>
+<p><a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a><br>
+<a href="https://v3.vuejs.org/"><img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js" alt="Vue.js"></a><br>
+<a href="https://flask.palletsprojects.com/"><img src="https://img.shields.io/badge/Flask-2.x-000000?logo=flask" alt="Flask"></a><br>
+<a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.7+-3776AB?logo=python" alt="Python"></a></p>
+<blockquote>
+<p>🚀 <strong>实时股票数据分析·可视化平台</strong> - 基于 Vue.js + Flask 的现代化数据可视化系统</p>
+</blockquote>
+<p><strong>作者</strong>: chenlei</p>
+<h2 id="-作者">👨‍💻 作者 </h2>
+<p><strong>chenlei</strong></p>
+<ul>
+<li>项目创建者及主要开发者</li>
+<li>专注于Web全栈开发和数据可视化</li>
+</ul>
+<p>详细贡献者信息请参考 <a href="CONTRIBUTORS.md">CONTRIBUTORS.md</a></p>
+<h2 id="-这个系统能做什么">🚀 这个系统能做什么 </h2>
+<h3 id="-主要功能概述">📊 主要功能概述 </h3>
+<p>本系统是以<strong>实时股票数据可视化</strong>为核心的综合性Web应用程序：</p>
+<h4 id="-核心功能">🎯 核心功能 </h4>
+<ul>
+<li><strong>📈 实时数据仪表板</strong> - 实时显示股价、盘口信息、板块分析</li>
+<li><strong>🔄 多客户端同步</strong> - 多浏览器数据同步，最适合团队分析</li>
+<li><strong>📊 交互式图表</strong> - 基于 Plotly.js 的高级可视化（缩放、平移、选择）</li>
+<li><strong>📋 动态表格</strong> - 自定义背景色、排序、筛选功能</li>
+<li><strong>⚡ 一键环境构建</strong> - 5分钟启动专业分析环境</li>
+</ul>
+<h4 id="️-开发者功能">🛠️ 开发者功能 </h4>
+<ul>
+<li><strong>🔧 自动配置生成</strong> - 一条命令完成新页面添加</li>
+<li><strong>🖥️ VS Code完全集成</strong> - IDE内一键启动·调试</li>
+<li><strong>🧪 综合测试系统</strong> - 单元、集成、性能测试</li>
+<li><strong>📝 自动文档生成</strong> - API规格自动更新</li>
+<li><strong>🔍 实时监控</strong> - 系统性能可视化</li>
+</ul>
+<h4 id="-教育学习用途">🎓 教育·学习用途 </h4>
+<ul>
+<li><strong>💡 现代化技术栈</strong> - Vue.js 3 + Flask + SSE 最佳实践</li>
+<li><strong>📚 丰富文档</strong> - 15个以上详细指南（97%完成度）</li>
+<li><strong>🔬 实践性样例</strong> - 企业级架构模式</li>
+<li><strong>🌐 多语言支持</strong> - 中文完全本地化</li>
+</ul>
+<h4 id="-企业应用场景">🏢 企业应用场景 </h4>
+<ul>
+<li><strong>📊 自定义仪表板构建</strong> - 支持品牌化的完全控制UI</li>
+<li><strong>🚀 MVP·原型开发</strong> - 快速概念验证</li>
+<li><strong>🎯 技术验证平台</strong> - 新技术栈评估</li>
+<li><strong>👨‍🏫 企业内训工具</strong> - Web开发技能提升项目</li>
+</ul>
+<h3 id="-独特价值主张">💎 独特价值主张 </h3>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>传统解决方案</th>
+<th>本系统</th>
+<th>优势</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>环境搭建</strong></td>
+<td>数小时～数天</td>
+<td><strong>5分钟</strong></td>
+<td>🚀 95%时间节省</td>
+</tr>
+<tr>
+<td><strong>定制化</strong></td>
+<td>有限制</td>
+<td><strong>完全自由</strong></td>
+<td>🎨 全面控制</td>
+</tr>
+<tr>
+<td><strong>学习资源</strong></td>
+<td>分散化</td>
+<td><strong>综合文档</strong></td>
+<td>📚 97%完成度</td>
+</tr>
+<tr>
+<td><strong>开发效率</strong></td>
+<td>手动配置</td>
+<td><strong>自动化工具</strong></td>
+<td>⚡ 85%效率提升</td>
+</tr>
+<tr>
+<td><strong>技术现代性</strong></td>
+<td>传统技术</td>
+<td><strong>最新技术栈</strong></td>
+<td>🆕 行业最前沿</td>
+</tr>
+</tbody>
+</table>
+<h2 id="-演示视频教程">🎥 演示视频·教程 </h2>
+<h3 id="-系统概览视频">📹 系统概览视频 </h3>
+<p>您可以观看系统主要功能和实时仪表板的运行情况：</p>
+<p><a href="https://www.youtube.com/watch?v=dF2n_UqZiVk&amp;ab_channel=YYfish" title="数据可视化系统概览 - 点击播放"><img src="https://img.youtube.com/vi/dF2n_UqZiVk/maxresdefault.jpg" alt="数据可视化系统 - 概览演示"></a></p>
+<h2 id="-主要特色">✨ 主要特色 </h2>
+<ul>
+<li>🔄 <strong>实时数据同步</strong> - 基于 Server-Sent Events (SSE) 技术</li>
+<li>📊 <strong>智能模拟数据</strong> - 内置丰富演示数据，无需外部数据源</li>
+<li>🎨 <strong>丰富可视化</strong> - 集成 Plotly.js 的交互式图表</li>
+<li>📱 <strong>响应式设计</strong> - 完美适配桌面和移动设备</li>
+<li>🔧 <strong>模块化架构</strong> - 统一配置管理，易于扩展·维护</li>
+<li>🎯 <strong>零配置启动</strong> - 自动配置生成，一键启动全部服务</li>
+<li>🛠️ <strong>VS Code 集成</strong> - 内置任务配置，IDE 一键启动支持</li>
+</ul>
+<h2 id="-竞品工具比较分析">📊 竞品工具比较分析 </h2>
+<p>本系统与主要可视化工具 Streamlit、Grafana 的详细比较：</p>
+<h3 id="-综合比较表">🔍 综合比较表 </h3>
+<table>
+<thead>
+<tr>
+<th>评估项目</th>
+<th>本系统</th>
+<th>Streamlit</th>
+<th>Grafana</th>
+<th>评价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>🚀 搭建时间</strong></td>
+<td>5分钟（自动化）</td>
+<td>10-15分钟</td>
+<td>30-60分钟</td>
+<td>✅ <strong>最优秀</strong></td>
+</tr>
+<tr>
+<td><strong>📱 UI/UX</strong></td>
+<td>现代化Vue.js UI</td>
+<td>简单Python UI</td>
+<td>专业仪表板</td>
+<td>✅ <strong>最用户友好</strong></td>
+</tr>
+<tr>
+<td><strong>🔄 实时性</strong></td>
+<td>SSE + 自动重连</td>
+<td>手动刷新</td>
+<td>WebSocket支持</td>
+<td>✅ <strong>稳健实现</strong></td>
+</tr>
+<tr>
+<td><strong>🎨 定制化</strong></td>
+<td>完全可定制</td>
+<td>有限制</td>
+<td>高级定制</td>
+<td>✅ <strong>完全控制</strong></td>
+</tr>
+<tr>
+<td><strong>📊 可视化库</strong></td>
+<td>Plotly.js (最新)</td>
+<td>Plotly/Matplotlib</td>
+<td>众多插件</td>
+<td>⚖️ <strong>同等</strong></td>
+</tr>
+<tr>
+<td><strong>🔧 开发体验</strong></td>
+<td>VS Code集成</td>
+<td>Jupyter/IDE</td>
+<td>Web UI配置</td>
+<td>✅ <strong>最佳开发体验</strong></td>
+</tr>
+<tr>
+<td><strong>📝 学习成本</strong></td>
+<td>中等</td>
+<td>低</td>
+<td>高</td>
+<td>⚖️ <strong>平衡良好</strong></td>
+</tr>
+<tr>
+<td><strong>🏗️ 架构</strong></td>
+<td>全栈分离</td>
+<td>Python单体</td>
+<td>插件式</td>
+<td>✅ <strong>最可扩展</strong></td>
+</tr>
+<tr>
+<td><strong>🔒 企业采用</strong></td>
+<td>自由度高</td>
+<td>有限制</td>
+<td>企业级支持</td>
+<td>✅ <strong>灵活性最高</strong></td>
+</tr>
+<tr>
+<td><strong>💰 成本</strong></td>
+<td>完全免费</td>
+<td>免费/付费版</td>
+<td>免费/付费版</td>
+<td>✅ <strong>完全开源</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="-各工具特色分析">🎯 各工具特色分析 </h3>
+<h4 id="-本系统优势">🚀 本系统优势 </h4>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>优势点</th>
+<th>详情</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>开发效率</strong></td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>一键环境构建，自动配置生成</td>
+</tr>
+<tr>
+<td><strong>技术现代性</strong></td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>Vue.js 3、Flask最新版、最新最佳实践</td>
+</tr>
+<tr>
+<td><strong>扩展性</strong></td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>模块化设计，插件式架构</td>
+</tr>
+<tr>
+<td><strong>文档</strong></td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>行业最高水准97%完成度</td>
+</tr>
+<tr>
+<td><strong>实时性</strong></td>
+<td>⭐⭐⭐⭐⭐</td>
+<td>SSE + 自动重连，多客户端支持</td>
+</tr>
+</tbody>
+</table>
+<h4 id="-与streamlit比较">📊 与Streamlit比较 </h4>
+<table>
+<thead>
+<tr>
+<th>比较项目</th>
+<th>本系统</th>
+<th>Streamlit</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>配置复杂度</strong></td>
+<td>已自动化</td>
+<td>手动配置</td>
+<td>✅ <strong>本系统获胜</strong></td>
+</tr>
+<tr>
+<td><strong>UI灵活性</strong></td>
+<td>Vue.js完全控制</td>
+<td>Python小部件</td>
+<td>✅ <strong>本系统获胜</strong></td>
+</tr>
+<tr>
+<td><strong>学习曲线</strong></td>
+<td>需要Vue.js知识</td>
+<td>仅需Python</td>
+<td>❌ <strong>Streamlit获胜</strong></td>
+</tr>
+<tr>
+<td><strong>原型速度</strong></td>
+<td>中等</td>
+<td>非常快速</td>
+<td>❌ <strong>Streamlit获胜</strong></td>
+</tr>
+<tr>
+<td><strong>生产运营</strong></td>
+<td>企业级支持</td>
+<td>有限制</td>
+<td>✅ <strong>本系统获胜</strong></td>
+</tr>
+<tr>
+<td><strong>数据科学集成</strong></td>
+<td>手动实现</td>
+<td>原生支持</td>
+<td>❌ <strong>Streamlit获胜</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="-与grafana比较">📈 与Grafana比较 </h4>
+<table>
+<thead>
+<tr>
+<th>比较项目</th>
+<th>本系统</th>
+<th>Grafana</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>搭建时间</strong></td>
+<td>5分钟</td>
+<td>30-60分钟</td>
+<td>✅ <strong>本系统获胜</strong></td>
+</tr>
+<tr>
+<td><strong>监控功能</strong></td>
+<td>基础实现</td>
+<td>专业化</td>
+<td>❌ <strong>Grafana获胜</strong></td>
+</tr>
+<tr>
+<td><strong>告警功能</strong></td>
+<td>手动实现</td>
+<td>高级告警</td>
+<td>❌ <strong>Grafana获胜</strong></td>
+</tr>
+<tr>
+<td><strong>数据源</strong></td>
+<td>自定义实现</td>
+<td>100+连接器</td>
+<td>❌ <strong>Grafana获胜</strong></td>
+</tr>
+<tr>
+<td><strong>定制化</strong></td>
+<td>完全自由</td>
+<td>插件依赖</td>
+<td>✅ <strong>本系统获胜</strong></td>
+</tr>
+<tr>
+<td><strong>开发友好</strong></td>
+<td>VS Code集成</td>
+<td>Web UI</td>
+<td>✅ <strong>本系统获胜</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="-使用场景推荐">🎯 使用场景推荐 </h3>
+<h4 id="-本系统最适合的情况">✅ 本系统最适合的情况： </h4>
+<ul>
+<li><strong>🏢 企业内定制仪表板</strong>：需要完全控制和品牌化</li>
+<li><strong>🎓 教育·培训项目</strong>：现代化技术栈学习</li>
+<li><strong>🚀 初创企业MVP</strong>：快速开发和灵活扩展</li>
+<li><strong>💼 咨询业务</strong>：客户专属解决方案</li>
+<li><strong>🔬 技术验证</strong>：Vue.js + Flask 架构验证</li>
+</ul>
+<h4 id="️-streamlit适合的情况">⚖️ Streamlit适合的情况： </h4>
+<ul>
+<li><strong>📊 数据科学家</strong>：重视Python生态系统</li>
+<li><strong>🔬 研究原型</strong>：快速实验和验证</li>
+<li><strong>📈 分析报告</strong>：定期数据分析报告</li>
+<li><strong>🎯 POC开发</strong>：概念验证的高速开发</li>
+</ul>
+<h4 id="-grafana适合的情况">🏭 Grafana适合的情况： </h4>
+<ul>
+<li><strong>🔍 基础设施监控</strong>：系统·网络监控</li>
+<li><strong>📊 运维仪表板</strong>：DevOps 和 SRE 团队</li>
+<li><strong>⚠️ 告警重视</strong>：高级告警·通知功能</li>
+<li><strong>🔗 多数据源</strong>：与现有系统集成</li>
+</ul>
+<h3 id="-技术选择指南">💡 技术选择指南 </h3>
+<div class="mermaid">graph TD
+    A[🎯 项目需求分析] --&gt; B{🤔 主要目的是？}
+    
+    B --&gt;|⚡ 快速原型| C[📊 推荐Streamlit]
+    B --&gt;|📈 系统监控| D[📉 推荐Grafana]
+    B --&gt;|🎨 定制解决方案| E[🚀 推荐本系统]
+    
+    E --&gt; F{⚙️ 技术需求}
+    F --&gt;|🎯 需要完全控制| G[✅ 采用本系统]
+    F --&gt;|🆕 最新技术栈| G
+    F --&gt;|🏢 企业级扩展性| G
+    
+    C --&gt; H{🔍 约束确认}
+    H --&gt;|✅ UI限制OK| I[✅ 采用Streamlit]
+    H --&gt;|🐍 以Python为中心| I
+    
+    D --&gt; J{📊 监控需求}
+    J --&gt;|🔍 需要专业监控| K[✅ 采用Grafana]
+    J --&gt;|🔗 现有系统集成| K
+    
+    %% 样式定义
+    classDef startNode fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    classDef decisionNode fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef ourSystem fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef competitor fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef result fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    
+    class A startNode
+    class B,F,H,J decisionNode
+    class E,G ourSystem
+    class C,D,I,K competitor
+</div><h3 id="-结论">🏆 结论 </h3>
+<p>本系统在<strong>定制化、开发效率、技术现代性</strong>方面具有优势，特别在企业内开发、教育目的、技术验证方面是最佳选择。虽然在某些方面不如Streamlit的快速性或Grafana的专业性，但在<strong>综合开发体验和前瞻性</strong>方面是最优秀的解决方案。</p>
+<h2 id="-快速开始">🚀 快速开始 </h2>
+<h3 id="环境要求">环境要求 </h3>
+<ul>
+<li><strong>Node.js</strong> 16+</li>
+<li><strong>Python</strong> 3.7+</li>
+<li><strong>npm</strong> 或 <strong>yarn</strong></li>
+</ul>
+<h3 id="方法1一键初始化新用户推荐">方法1：一键初始化（新用户推荐） </h3>
+<ol>
+<li>
+<p><strong>克隆项目</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">git</span> clone <span class="token punctuation">[</span>your-repo-url<span class="token punctuation">]</span>
+<span class="token builtin class-name">cd</span> vue-project
+</code></pre></li>
+<li>
+<p><strong>配置初始化</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/init-config.py
+</code></pre><p>交互式配置向导自动：</p>
+<ul>
+<li>✅ 检测 Python 和 Node.js 环境</li>
+<li>✅ 配置端口和路径设置</li>
+<li>✅ 生成统一配置文件 <code>project-config.json</code></li>
+<li>✅ 自动生成前端配置、路由、组件</li>
+<li>✅ 创建 VS Code 任务和启动脚本</li>
+</ul>
+</li>
+<li>
+<p><strong>安装前端依赖</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">npm</span> <span class="token function">install</span>
+</code></pre></li>
+<li>
+<p><strong>一键启动</strong></p>
+<p><strong>方法1: 使用脚本启动</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># Windows 用户</span>
+start-all-services.bat
+
+<span class="token comment"># Linux/Mac 用户  </span>
+./start-all-services.sh
+</code></pre><p><strong>方法2: 使用 VS Code 任务（推荐）</strong></p>
+<ul>
+<li>在 VS Code 中按 <code>Ctrl+Shift+P</code> (Windows/Linux) 或 <code>Cmd+Shift+P</code> (Mac)</li>
+<li>输入 "Tasks: Run Task"</li>
+<li>选择 "🚀 启动所有服务"</li>
+<li>系统自动启动前端和后端服务</li>
+</ul>
+</li>
+</ol>
+<h3 id="方法2快速启动已配置情况">方法2：快速启动（已配置情况） </h3>
+<p>初始化配置完成后：</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># 安装依赖（仅首次运行）</span>
+<span class="token function">npm</span> <span class="token function">install</span>
+
+<span class="token comment"># 启动所有服务</span>
+start-all-services.bat   <span class="token comment"># Windows</span>
+./start-all-services.sh  <span class="token comment"># Linux/Mac</span>
+</code></pre><h3 id="访问地址">访问地址 </h3>
+<ul>
+<li>🌐 <strong>前端界面</strong>: <a href="http://localhost:8081">http://localhost:8081</a></li>
+<li>🔧 <strong>后端API</strong>: <a href="http://localhost:5004">http://localhost:5004</a></li>
+<li>📊 <strong>演示仪表板</strong>: <a href="http://localhost:8081/demo_1">http://localhost:8081/demo_1</a></li>
+</ul>
+<details>
+<summary>🔧 手动启动步骤（高级用户）</summary>
+<h3 id="手动启动后端服务">手动启动后端服务 </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># 启动演示服务器 (端口5004)</span>
+python api/show_plate_server_demo.py
+</code></pre><h3 id="手动启动前端服务">手动启动前端服务 </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># 启动Vue开发服务器 (端口8081)</span>
+<span class="token function">npm</span> run serve
+</code></pre><h3 id="生产构建">生产构建 </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">npm</span> run build
+</code></pre><p>编译后的文件会生成到 <code>dist</code> 目录。</p>
+</details>
+<h2 id="-项目结构">📁 项目结构 </h2>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>vue-project/
+├── 📄 project-config.json           # 🎯 统一配置文件（核心）
+├── 🚀 start-all-services.bat/.sh   # 一键启动脚本
+├── 📁 scripts/                     # 🛠️ 工具脚本目录
+│   ├── 🤖 auto-config-generator.py # 🔧 自动配置生成器
+│   ├── ⚡ init-config.py           # 🚀 项目初始化脚本
+│   └── 📝 quick-add-page.py        # ➕ 页面快速添加工具
+│
+├── 🎛️ api/                         # Flask 后端 API 服务
+│   └── 🎯 show_plate_server_demo.py # 演示服务器（内置模拟数据）
+│
+├── 🎨 src/                         # Vue 前端源码
+│   ├── 📋 components/dashboard/     # 仪表板组件
+│   │   ├── Dashboard.vue           # 主仪表板组件
+│   │   ├── ChartComponent.vue      # 图表组件
+│   │   └── TableComponent.vue      # 表格组件
+│   ├── ⚙️ config/
+│   │   └── api.js                  # 🤖 自动生成 API 配置
+│   ├── 🛣️ router/
+│   │   └── index.js                # 🤖 自动生成路由配置
+│   └── 📄 views/
+│       ├── Home.vue                # 🤖 自动生成首页
+│       └── StockDashboard.vue      # 数据可视化页面
+│
+├── 🛠️ .vscode/
+│   └── tasks.json                  # 🤖 自动生成 VS Code 任务
+│
+├── 📦 package.json                 # npm 配置
+├── ⚙️ vue.config.js               # Vue CLI 配置
+└── 📖 README.md                   # 项目文档
+</code></pre><h3 id="-核心文件说明">🎯 核心文件说明 </h3>
+<ul>
+<li><strong>project-config.json</strong>: 统一管理所有服务配置、端口、路径等</li>
+<li><strong>scripts/auto-config-generator.py</strong>: 根据配置文件自动生成前端·后端配置</li>
+<li><strong>show_plate_server_demo.py</strong>: 完全模拟数据库的演示服务，无需外部数据源</li>
+</ul>
+<h2 id="-api配置说明">🌐 API配置说明 </h2>
+<h3 id="统一配置管理">统一配置管理 </h3>
+<p>项目使用 <code>project-config.json</code> 统一管理所有配置：</p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"projectInfo"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"数据可视化系统"</span><span class="token punctuation">,</span>
+    <span class="token property">"basePort"</span><span class="token operator">:</span> <span class="token number">5004</span><span class="token punctuation">,</span>
+    <span class="token property">"frontendPort"</span><span class="token operator">:</span> <span class="token number">8081</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"services"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"demo_1"</span><span class="token punctuation">,</span>
+      <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"演示仪表板"</span><span class="token punctuation">,</span>
+      <span class="token property">"port"</span><span class="token operator">:</span> <span class="token number">5004</span><span class="token punctuation">,</span>
+      <span class="token property">"path"</span><span class="token operator">:</span> <span class="token string">"/demo_1"</span><span class="token punctuation">,</span>
+      <span class="token property">"serverFile"</span><span class="token operator">:</span> <span class="token string">"show_plate_server_demo.py"</span><span class="token punctuation">,</span>
+      <span class="token property">"component"</span><span class="token operator">:</span> <span class="token string">"StockDashboard"</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="自动生成的配置文件">自动生成的配置文件 </h3>
+<p><strong>API 服务配置</strong> (<code>src/config/api.js</code> - 自动生成)</p>
+<pre data-role="codeBlock" data-info="javascript" class="language-javascript javascript"><code><span class="token keyword keyword-const">const</span> <span class="token constant">API_CONFIG</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token literal-property property">demo_1</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token literal-property property">baseUrl</span><span class="token operator">:</span> <span class="token string">'http://localhost:5004'</span><span class="token punctuation">,</span>
+    <span class="token literal-property property">name</span><span class="token operator">:</span> <span class="token string">'演示仪表板'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre><p><strong>路由配置</strong> (<code>src/router/index.js</code> - 自动生成)</p>
+<pre data-role="codeBlock" data-info="javascript" class="language-javascript javascript"><code><span class="token punctuation">{</span>
+  <span class="token literal-property property">path</span><span class="token operator">:</span> <span class="token string">'/demo_1'</span><span class="token punctuation">,</span>
+  <span class="token literal-property property">component</span><span class="token operator">:</span> <span class="token maybe-class-name">StockDashboard</span><span class="token punctuation">,</span>
+  <span class="token literal-property property">meta</span><span class="token operator">:</span> <span class="token punctuation">{</span> 
+    <span class="token literal-property property">apiService</span><span class="token operator">:</span> <span class="token string">'demo_1'</span><span class="token punctuation">,</span>
+    <span class="token literal-property property">title</span><span class="token operator">:</span> <span class="token string">'演示仪表板'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre><h3 id="主要api端点">主要API端点 </h3>
+<ul>
+<li><code>GET /health</code> - 服务健康检查</li>
+<li><code>GET /api/dashboard-config</code> - 获取仪表板配置</li>
+<li><code>GET /api/dashboard/updates</code> - SSE 实时更新端点</li>
+<li><code>POST /api/dashboard/update</code> - 接收更新请求</li>
+<li><code>GET /api/chart-data/*</code> - 图表数据 API</li>
+<li><code>GET /api/table-data/*</code> - 表格数据 API</li>
+</ul>
+<h3 id="服务器端口">服务器端口 </h3>
+<ul>
+<li><strong>端口5004</strong>: 演示服务器 (show_plate_server_demo.py)</li>
+<li><strong>端口8081</strong>: Vue 前端开发服务器</li>
+</ul>
+<h2 id="️-开发指南">🛠️ 开发指南 </h2>
+<h3 id="vs-code-一键开发体验">VS Code 一键开发体验 </h3>
+<p><strong>推荐开发流程</strong>：</p>
+<ol>
+<li>用 VS Code 打开项目</li>
+<li><code>Ctrl+Shift+P</code> → 输入 "Tasks: Run Task"</li>
+<li>选择 "🚀 启动所有服务"</li>
+<li>系统自动启动前端和后端，无需手动操作</li>
+</ol>
+<p><strong>可用的 VS Code 任务</strong>：</p>
+<ul>
+<li>🚀 <strong>启动所有服务</strong> - 同时启动前端和后端</li>
+<li>🎨 <strong>启动前端开发服务器</strong> - 仅启动 Vue 开发服务器</li>
+<li>🔧 <strong>演示服务器</strong> - 仅启动后端演示服务</li>
+<li>📦 <strong>构建前端项目</strong> - 构建生产版本</li>
+</ul>
+<h3 id="自动化配置管理">自动化配置管理 </h3>
+<p><strong>重新生成所有配置</strong>：</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/auto-config-generator.py
+</code></pre><p><strong>添加新页面/服务</strong>：</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/quick-add-page.py
+</code></pre><p><strong>重新初始化项目</strong>：</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/init-config.py
+</code></pre><h3 id="添加新仪表板服务">添加新仪表板服务 </h3>
+<ol>
+<li>
+<p><strong>修改配置文件</strong><br>
+编辑 <code>project-config.json</code>，在 <code>services</code> 数组中添加新服务：</p>
+<pre data-role="codeBlock" data-info="json" class="language-json json"><code><span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"my_new_service"</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"我的新服务"</span><span class="token punctuation">,</span>
+  <span class="token property">"port"</span><span class="token operator">:</span> <span class="token number">5005</span><span class="token punctuation">,</span>
+  <span class="token property">"path"</span><span class="token operator">:</span> <span class="token string">"/my_service"</span><span class="token punctuation">,</span>
+  <span class="token property">"serverFile"</span><span class="token operator">:</span> <span class="token string">"my_server.py"</span><span class="token punctuation">,</span>
+  <span class="token property">"component"</span><span class="token operator">:</span> <span class="token string">"StockDashboard"</span>
+<span class="token punctuation">}</span>
+</code></pre></li>
+<li>
+<p><strong>自动生成配置</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/auto-config-generator.py
+</code></pre></li>
+<li>
+<p><strong>创建服务器文件</strong><br>
+复制 <code>api/show_plate_server_demo.py</code> 并修改</p>
+</li>
+<li>
+<p><strong>重启服务</strong><br>
+使用 VS Code 任务或脚本重启</p>
+</li>
+</ol>
+<h3 id="自定义组件开发">自定义组件开发 </h3>
+<ul>
+<li><strong>表格组件</strong>: 支持多种背景色样式和实时数据更新</li>
+<li><strong>图表组件</strong>: 基于 Plotly.js，支持交互操作</li>
+<li><strong>实时同步</strong>: 所有组件都支持 SSE 实时数据更新</li>
+</ul>
+<h3 id="sse-连接调试">SSE 连接调试 </h3>
+<p>在浏览器控制台检查连接状态：</p>
+<pre data-role="codeBlock" data-info="javascript" class="language-javascript javascript"><code><span class="token comment">// 连接成功</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'SSE连接已建立'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接收更新</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'接收到更新请求:'</span><span class="token punctuation">,</span> update<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre><h2 id="-测试系统">🧪 测试系统 </h2>
+<p>项目构建了完整的测试系统，保证代码质量和系统稳定性：</p>
+<h3 id="测试类型">测试类型 </h3>
+<ul>
+<li><strong>单元测试</strong> - 基础框架和组件测试</li>
+<li><strong>集成测试</strong> - API 端点和服务间通信测试</li>
+<li><strong>性能测试</strong> - 并发负载和响应时间测试</li>
+<li><strong>端到端测试</strong> - 完整用户流程测试</li>
+</ul>
+<h3 id="测试执行">测试执行 </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># 运行所有后端测试</span>
+python <span class="token parameter variable">-m</span> pytest tests/ <span class="token parameter variable">--cov</span><span class="token operator">=</span>api
+
+<span class="token comment"># 运行集成测试</span>
+python tests/backend/test_api_integration.py
+
+<span class="token comment"># 运行性能测试  </span>
+python tests/performance_test.py
+
+<span class="token comment"># VS Code 任务</span>
+Ctrl+Shift+P → Tasks: Run Task → <span class="token string">"🧪 运行后端测试"</span>
+</code></pre><h2 id="-代码质量保证">🔍 代码质量保证 </h2>
+<h3 id="质量检查工具">质量检查工具 </h3>
+<ul>
+<li><strong>代码风格</strong> - flake8, black, isort</li>
+<li><strong>安全检查</strong> - safety 依赖安全扫描</li>
+<li><strong>测试覆盖率</strong> - pytest-cov 覆盖率分析</li>
+<li><strong>文档质量</strong> - API 文档完整性检查</li>
+</ul>
+<h3 id="使用方法">使用方法 </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># 完整质量检查</span>
+python scripts/quality-check.py
+
+<span class="token comment"># 自动代码格式化</span>
+black api/ scripts/ tests/
+isort api/ scripts/ tests/
+
+<span class="token comment"># VS Code 任务</span>
+Ctrl+Shift+P → Tasks: Run Task → <span class="token string">"🔍 代码质量检查"</span>
+</code></pre><h2 id="-性能监控">📊 性能监控 </h2>
+<h3 id="监控功能">监控功能 </h3>
+<ul>
+<li><strong>实时监控</strong> - CPU、内存、磁盘使用率</li>
+<li><strong>服务监控</strong> - API 响应时间和可用性</li>
+<li><strong>性能告警</strong> - 可配置阈值告警</li>
+<li><strong>数据导出</strong> - 监控历史数据导出</li>
+</ul>
+<h3 id="使用方法-1">使用方法 </h3>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># 启动性能监控</span>
+python scripts/performance-monitor.py
+
+<span class="token comment"># 单次性能检查</span>
+python scripts/performance-monitor.py <span class="token comment"># 选择选项2</span>
+
+<span class="token comment"># VS Code 任务</span>
+Ctrl+Shift+P → Tasks: Run Task → <span class="token string">"📊 性能监控"</span>
+</code></pre><h2 id="-技术特色">📈 技术特色 </h2>
+<h3 id="-零配置启动">🎯 零配置启动 </h3>
+<ul>
+<li><strong>统一配置文件</strong>: 一个 JSON 文件管理所有服务配置</li>
+<li><strong>自动生成</strong>: 前端·后端配置、路由、组件等全部自动生成</li>
+<li><strong>智能检测</strong>: 自动检测环境，适应不同操作系统</li>
+</ul>
+<h3 id="-实时数据同步">🔄 实时数据同步 </h3>
+<ul>
+<li><strong>SSE 技术</strong>: 基于 Server-Sent Events 的服务器推送实现</li>
+<li><strong>跨组件同步</strong>: 一个组件的更新触发所有相关组件更新</li>
+<li><strong>多客户端支持</strong>: 支持多个浏览器窗口同时连接和同步</li>
+</ul>
+<h3 id="-智能模拟数据">📊 智能模拟数据 </h3>
+<ul>
+<li><strong>内置数据</strong>: 完全模拟数据库，无需外部数据源</li>
+<li><strong>真实场景</strong>: 模拟真实股价数据格式和变化模式</li>
+<li><strong>开箱即用</strong>: 下载后即可运行，适合演示和开发</li>
+</ul>
+<h3 id="️-开发者友好">🛠️ 开发者友好 </h3>
+<ul>
+<li><strong>VS Code 集成</strong>: 内置任务配置，一键启动调试</li>
+<li><strong>热重载</strong>: 支持前端·后端代码热重载</li>
+<li><strong>自动重连</strong>: SSE 连接断开时自动重连</li>
+</ul>
+<h2 id="-使用场景">📋 使用场景 </h2>
+<ol>
+<li><strong>📊 股价数据可视化</strong>: 实时显示股价、板块轮动等数据</li>
+<li><strong>🔍 数据分析演示</strong>: 演示实时数据分析和可视化能力</li>
+<li><strong>🎓 教育培训</strong>: Web开发、数据可视化、实时通信技术教学</li>
+<li><strong>🔬 技术验证</strong>: Vue.js + Flask + SSE 技术栈验证</li>
+<li><strong>🎯 项目原型</strong>: 实时数据仪表板项目的起始模板</li>
+</ol>
+<h2 id="-扩展文档">🔗 扩展文档 </h2>
+<ul>
+<li>📋 <a href="QUICK_REFERENCE.md">快速参考</a> - 1分钟启动、故障排除、常用命令</li>
+<li>📖 <a href="docs/TECHNICAL_DETAILS.md">技术实现详情</a> - SSE 工作流、函数调用链、调试指南</li>
+<li>🛠️ <a href="docs/CONFIG_GUIDE.md">配置管理指南</a> - 配置文件详情、自定义配置</li>
+<li>🎯 <a href="docs/BEST_PRACTICES.md">最佳实践</a> - 开发建议、性能优化</li>
+<li>🔄 <strong><a href="docs/NEW_PAGE_MIGRATION_GUIDE.md">新页面迁移指南</a></strong> - 详细的页面添加和旧服务迁移步骤</li>
+<li>🏗️ <a href="docs/BACKEND_FRAMEWORK_OPTIMIZATION.md">后端框架优化</a> - 框架重构和代码复用指南</li>
+<li>🤝 <a href="docs/CONTRIBUTING.md">贡献指南</a> - 参与项目开发的方法</li>
+<li>👥 <a href="CONTRIBUTORS.md">贡献者列表</a> - 项目贡献者信息</li>
+</ul>
+<h2 id="-贡献指南">🤝 贡献指南 </h2>
+<h3 id="代码提交">代码提交 </h3>
+<ol>
+<li>Fork 本项目</li>
+<li>创建功能分支: <code>git checkout -b feature/amazing-feature</code></li>
+<li>提交更改: <code>git commit -m 'Add some amazing feature'</code></li>
+<li>推送分支: <code>git push origin feature/amazing-feature</code></li>
+<li>提交 Pull Request</li>
+</ol>
+<h3 id="问题报告">问题报告 </h3>
+<ul>
+<li>使用 GitHub Issues 报告 bug</li>
+<li>提供详细的重现步骤和环境信息</li>
+<li>包含错误日志和截图（如适用）</li>
+</ul>
+<h3 id="功能建议">功能建议 </h3>
+<ul>
+<li>通过 GitHub Issues 提交功能建议</li>
+<li>说明预期功能和使用场景</li>
+<li>考虑向后兼容性</li>
+</ul>
+<h2 id="-许可证">📄 许可证 </h2>
+<p>本项目采用 <a href="LICENSE">MIT 许可证</a>。</p>
+<h2 id="-作者-1">👨‍💻 作者 </h2>
+<p><strong>chenlei</strong></p>
+<ul>
+<li>项目创建者及主要开发者</li>
+<li>专注于 Web 全栈开发和数据可视化</li>
+</ul>
+<h2 id="-技术支持">📞 技术支持 </h2>
+<p>如有问题或建议，请通过以下方式联系：</p>
+<ul>
+<li>📧 提交 <a href="https://github.com/your-repo/issues">GitHub Issue</a></li>
+<li>📖 参考项目 <a href="https://github.com/your-repo/wiki">Wiki 文档</a></li>
+<li>💬 参与社区讨论</li>
+</ul>
+<hr>
+<p><strong>⚠️ 免责声明</strong>: 本系统为技术演示工具，仅用于学习和研究目的，不构成投资建议。</p>
+
+      </div>
+      
+      
+    
+    
+    <script type="module">
+// TODO: If ZenUML gets integrated into mermaid in the future,
+//      we can remove the following lines.
+
+
+var MERMAID_CONFIG = ({"startOnLoad":false});
+if (typeof MERMAID_CONFIG !== 'undefined') {
+  MERMAID_CONFIG.startOnLoad = false
+  MERMAID_CONFIG.cloneCssStyles = false
+  MERMAID_CONFIG.theme = "default"
+}
+
+mermaid.initialize(MERMAID_CONFIG || {})
+if (typeof(window['Reveal']) !== 'undefined') {
+  function mermaidRevealHelper(event) {
+    var currentSlide = event.currentSlide
+    var diagrams = currentSlide.querySelectorAll('.mermaid')
+    for (var i = 0; i < diagrams.length; i++) {
+      var diagram = diagrams[i]
+      if (!diagram.hasAttribute('data-processed')) {
+        mermaid.init(null, diagram, ()=> {
+          Reveal.slide(event.indexh, event.indexv)
+        })
+      }
+    }
+  }
+  Reveal.addEventListener('slidetransitionend', mermaidRevealHelper)
+  Reveal.addEventListener('ready', mermaidRevealHelper)
+  await mermaid.run({
+    nodes: document.querySelectorAll('.mermaid')
+  })
+} else {
+  await mermaid.run({
+    nodes: document.querySelectorAll('.mermaid')
+  })
+}
+</script>
+    
+    
+    
+  
+    </body></html>

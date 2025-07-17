@@ -1,5 +1,8 @@
 # 📈 データ可視化システム
 
+> 🌍 **多言語対応** | **Multi-language** | **多语言版本**  
+> [🇯🇵 日本語](README.md) | [🇺🇸 English](README-en.md) | [🇨🇳 中文](README-zh.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js)](https://v3.vuejs.org/)
 [![Flask](https://img.shields.io/badge/Flask-2.x-000000?logo=flask)](https://flask.palletsprojects.com/)
