@@ -21,7 +21,7 @@
           <div class="step-content">
             <h3>运行配置生成器</h3>
             <p>自动生成所有配置文件</p>
-            <code>python scripts/auto-config-generator.py</code>
+            <code>python auto-config-generator.py</code>
           </div>
         </div>
         <div class="step">
@@ -56,6 +56,16 @@
           </div>
         </router-link>
 
+        <router-link to="/stacked-area-demo" class="dashboard-card">
+          <div class="card-icon">📊</div>
+          <h3>堆叠面积图演示</h3>
+          <p>三维数据可视化堆叠面积图组件演示</p>
+          <div class="card-status">
+            <span class="status-dot" :class="{ active: serviceStatus.stackedareademo }"></span>
+            {{ serviceStatus.stackedareademo ? '服务正常' : '服务未启动' }}
+          </div>
+        </router-link>
+
       </div>
     </section>
 
@@ -76,7 +86,7 @@
             <span>API连接</span>
           </div>
           <div class="status-value" :class="{ good: connectedServices > 0, warning: connectedServices === 0 }">
-            {{ connectedServices }}/1 服务在线
+            {{ connectedServices }}/2 服务在线
           </div>
         </div>
         <div class="status-item">
@@ -115,6 +125,7 @@ export default {
   setup() {
     const serviceStatus = ref({
       demo1: false,
+      stackedareademo: false,
     })
     
     const lastUpdateTime = ref('检查中...')
@@ -123,6 +134,7 @@ export default {
     const checkServiceStatus = async () => {
       const services = [
         { key: 'demo1', url: 'http://localhost:5004/health' },
+        { key: 'stackedareademo', url: 'http://localhost:5007/health' },
       ]
 
       for (const service of services) {

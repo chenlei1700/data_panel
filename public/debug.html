@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>页面调试</title>
+    <script>
+        async function testAPI() {
+            try {
+                console.log('测试 API 连接...');
+                const response = await fetch('/api/dashboard-config');
+                console.log('API 响应状态:', response.status);
+                const data = await response.json();
+                console.log('API 响应数据:', data);
+                
+                document.getElementById('api-result').innerHTML = `
+                    <h3>API 测试成功</h3>
+                    <p>状态: ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('API 测试失败:', error);
+                document.getElementById('api-result').innerHTML = `
+                    <h3>API 测试失败</h3>
+                    <p style="color: red;">${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testRouting() {
+            try {
+                console.log('测试路由...');
+                const response = await fetch('/stacked-area-demo');
+                console.log('路由响应状态:', response.status);
+                const text = await response.text();
+                console.log('路由响应长度:', text.length);
+                
+                document.getElementById('route-result').innerHTML = `
+                    <h3>路由测试结果</h3>
+                    <p>状态: ${response.status}</p>
+                    <p>内容长度: ${text.length} 字符</p>
+                    ${text.length < 1000 ? `<pre>${text}</pre>` : '<p>内容过长，请查看控制台</p>'}
+                `;
+            } catch (error) {
+                console.error('路由测试失败:', error);
+                document.getElementById('route-result').innerHTML = `
+                    <h3>路由测试失败</h3>
+                    <p style="color: red;">${error.message}</p>
+                `;
+            }
+        }
+        
+        window.onload = function() {
+            testAPI();
+            testRouting();
+        }
+    </script>
+</head>
+<body>
+    <h1>堆叠面积图页面调试</h1>
+    
+    <div id="api-result">
+        <p>正在测试 API...</p>
+    </div>
+    
+    <div id="route-result">
+        <p>正在测试路由...</p>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <h3>快速链接</h3>
+        <ul>
+            <li><a href="/">主页</a></li>
+            <li><a href="/stacked-area-demo">堆叠面积图演示</a></li>
+            <li><a href="/demo_1">股票仪表盘演示</a></li>
+        </ul>
+    </div>
+</body>
+</html>

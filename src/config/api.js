@@ -15,6 +15,19 @@ export const API_CONFIG = {
     }
   },
 
+  // 堆叠面积图演示 - 使用端口5007
+  'stacked_area_demo': {
+    baseURL: 'http://localhost:5007',
+    name: '堆叠面积图演示数据服务',
+    endpoints: {
+      dashboardConfig: '/api/dashboard-config',
+      chartData: '/api/chart-data',
+      tableData: '/api/table-data',
+      updates: '/api/dashboard/updates',
+      health: '/health',
+    }
+  },
+
 }
 
 /**

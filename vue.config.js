@@ -1,9 +1,25 @@
 // vue.config.js
 module.exports = {
   publicPath: '/',
+  configureWebpack: {
+    resolve: {
+      alias: {
+        '@': require('path').resolve(__dirname, 'src')
+      },
+      extensions: ['.js', '.vue', '.json']
+    },
+    entry: './src/main.js'
+  },
   devServer: {
     port: 8081,
     proxy: {
+      // 堆叠面积图演示API (端口5005)
+      '/api/chart-data/stacked-area': {
+        target: 'http://localhost:5005',
+        changeOrigin: true,
+        logLevel: 'debug'
+      },
+      
       // 主要API服务器 (演示服务器)
       '/api': {
         target: 'http://localhost:5004',

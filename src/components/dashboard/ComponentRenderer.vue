@@ -16,12 +16,14 @@
   import { defineComponent, computed, ref } from 'vue';
   import ChartComponent from './ChartComponent.vue';
   import TableComponent from './TableComponent.vue';
+  import StackedAreaChartComponent from './StackedAreaChartComponent.vue';
     
   export default defineComponent({
     name: 'ComponentRenderer',
     components: {
       ChartComponent,
-      TableComponent
+      TableComponent,
+      StackedAreaChartComponent
     },
     props: {
       componentConfig: {
@@ -38,6 +40,8 @@
             return 'ChartComponent';
           case 'table':
             return 'TableComponent';
+          case 'stackedAreaChart':
+            return 'StackedAreaChartComponent';
           default:
             return null;
         }

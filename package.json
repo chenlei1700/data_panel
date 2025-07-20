@@ -4,7 +4,13 @@
   "description": "实时股票数据分析与可视化平台 - Real-time Stock Data Analysis and Visualization Platform",
   "author": "chenlei",
   "license": "MIT",
-  "keywords": ["vue", "stock", "dashboard", "data-visualization", "real-time"],
+  "keywords": [
+    "vue",
+    "stock",
+    "dashboard",
+    "data-visualization",
+    "real-time"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/your-username/stock-dashboard-system.git"
@@ -29,18 +35,22 @@
     "vuex": "^4.0.0"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
+    "@testing-library/jest-dom": "^5.16.0",
+    "@testing-library/vue": "^7.0.0",
     "@vue/cli-plugin-babel": "^4.5.0",
+    "@vue/cli-plugin-typescript": "^5.0.0",
     "@vue/cli-service": "^4.5.0",
     "@vue/test-utils": "^2.4.0",
     "@vue/vue3-jest": "^29.0.0",
-    "@testing-library/vue": "^7.0.0",
-    "@testing-library/jest-dom": "^5.16.0",
     "babel-eslint": "^10.1.0",
     "babel-jest": "^29.0.0",
     "eslint": "^7.0.0",
     "eslint-plugin-vue": "^7.0.0",
     "jest": "^29.0.0",
     "jest-environment-jsdom": "^29.0.0",
+    "typescript": "^4.9.0",
+    "vue-tsc": "^1.8.0",
     "webpack-bundle-analyzer": "^4.9.0"
   },
   "browserslist": [
@@ -50,7 +60,11 @@
   ],
   "jest": {
     "testEnvironment": "jsdom",
-    "moduleFileExtensions": ["js", "json", "vue"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "vue"
+    ],
     "transform": {
       "^.+\\.vue$": "@vue/vue3-jest",
       "^.+\\.js$": "babel-jest"

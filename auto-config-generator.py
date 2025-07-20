@@ -205,19 +205,32 @@ export const getServiceInfo = (serviceName) => {{
     
     def generate_router_config(self):
         """生成路由配置文件"""
-        router_content = """// src/router/index.js
+        # 收集所有需要导入的组件
+        components_to_import = set()
+        components_to_import.add('Home')  # 默认添加Home组件
+        
+        for service in self.config['services']:
+            if service['enabled'] and 'component' in service:
+                components_to_import.add(service['component'])
+        
+        # 生成导入语句
+        import_statements = "import { createRouter, createWebHistory } from 'vue-router'\n"
+        import_statements += "import Home from '../views/Home.vue'\n"
+        
+        for component in sorted(components_to_import):
+            if component != 'Home':  # Home已经导入了
+                import_statements += f"import {component} from '../views/{component}.vue'\n"
+        
+        router_content = f"""// src/router/index.js
 // 此文件由 auto-config-generator.py 自动生成，请勿手动编辑
 
-import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import StockDashboard from '../views/StockDashboard.vue'
-
+{import_statements}
 const routes = [
-  {
+  {{
     path: '/',
     name: 'Home',
     component: Home
-  },
+  }},
 """
         
         # 生成每个服务的路由

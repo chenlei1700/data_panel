@@ -67,33 +67,31 @@
         
         console.log('开始渲染图表', chartContainer.value, chartData.value);
         
-        // 判断数据格式：直接的图表数据 vs 包含data数组的格式
+        // 判断数据格式：Plotly标准格式 vs 简化格式
         let traces;
         let layoutConfig = {};
         
         if (chartData.value.data && Array.isArray(chartData.value.data)) {
-          // 旧格式：包含data数组
+          // Plotly标准格式：{ chartType, data: [...], layout }
           const { chartType, data, layout } = chartData.value;
           layoutConfig = layout || {};
-          traces = data.map(series => {
-            const trace = {
-              x: series.x,
-              y: series.y,
-              name: series.name,
-              type: chartType || 'scatter'
-            };
+          traces = data;  // 直接使用data数组作为traces，因为它们已经是Plotly格式
+          
+          // 对于不完整的traces，添加必要的属性
+          traces = traces.map(trace => {
+            const completeTrace = { ...trace };
             
-            // 添加图表模式
-            if (chartType === 'line' || chartType === 'scatter') {
-              trace.mode = 'lines';
+            // 确保每个trace都有type属性
+            if (!completeTrace.type && chartType) {
+              completeTrace.type = chartType;
             }
             
-            // 添加其他可能的图表属性
-            if (series.mode) trace.mode = series.mode;
-            if (series.marker) trace.marker = series.marker;
-            if (series.line) trace.line = series.line;
+            // 为散点图/折线图添加默认mode
+            if ((completeTrace.type === 'scatter' || !completeTrace.type) && !completeTrace.mode) {
+              completeTrace.mode = 'lines+markers';
+            }
             
-            return trace;
+            return completeTrace;
           });
         } else {
           // 新格式：直接的图表数据对象

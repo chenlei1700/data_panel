@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>堆叠面积图表格测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #4CAF50; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; }
+        .api-test {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f5e8;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            background-color: #ffeaea;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 堆叠面积图组件表格功能测试</h1>
+        
+        <div class="test-section">
+            <h2>📡 API端点测试</h2>
+            <div class="api-test">
+                <button class="button" onclick="testWithTable()">测试带表格数据的API</button>
+                <button class="button" onclick="testWithoutTable()">测试不带表格数据的API</button>
+                <div id="api-result" class="result" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 预期数据格式</h2>
+            <p>带表格的API应该返回以下格式的数据：</p>
+            <pre>{
+  "stackedAreaData": {
+    "data": { ... },
+    "colors": [ ... ],
+    "keyOrder": [ ... ]
+  },
+  "tableData": {
+    "09:30": "141.9亿",
+    "10:00": "109.1亿",
+    ...
+  },
+  "xAxisValues": [ ... ]
+}</pre>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 前端组件测试</h2>
+            <p>请打开浏览器开发者工具的Console，查看以下信息：</p>
+            <ul>
+                <li><code>解析后的表格数据: ...</code></li>
+                <li><code>表格数据存在: true/false</code></li>
+                <li><code>表格数据键数量: ...</code></li>
+            </ul>
+            <p>如果看到上述信息，说明数据解析正常。</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 Vue组件渲染检查</h2>
+            <p>检查以下Vue模板条件：</p>
+            <pre>v-if="tableData && Object.keys(tableData).length > 0"</pre>
+            <p>应该满足以下条件：</p>
+            <ul>
+                <li>tableData 不为 null</li>
+                <li>tableData 是对象类型</li>
+                <li>Object.keys(tableData).length > 0</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function testWithTable() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '测试中...';
+            
+            try {
+                const response = await fetch('/api/chart-data/stacked-area-demo');
+                const data = await response.json();
+                
+                let result = '<h3>✅ 带表格数据的API测试结果</h3>';
+                result += `<p><strong>状态:</strong> ${response.status}</p>`;
+                result += `<p><strong>包含tableData:</strong> ${'tableData' in data ? '✅ 是' : '❌ 否'}</p>`;
+                
+                if ('tableData' in data) {
+                    result += `<p><strong>表格数据类型:</strong> ${typeof data.tableData}</p>`;
+                    result += `<p><strong>表格数据键数量:</strong> ${Object.keys(data.tableData).length}</p>`;
+                    result += `<p><strong>表格数据内容:</strong> ${JSON.stringify(data.tableData, null, 2)}</p>`;
+                }
+                
+                result += '<h4>完整响应数据:</h4>';
+                result += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = result;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h3>❌ 测试失败</h3><p>${error.message}</p>`;
+            }
+        }
+        
+        async function testWithoutTable() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = '测试中...';
+            
+            try {
+                const response = await fetch('/api/chart-data/stacked-area-no-table');
+                const data = await response.json();
+                
+                let result = '<h3>✅ 不带表格数据的API测试结果</h3>';
+                result += `<p><strong>状态:</strong> ${response.status}</p>`;
+                result += `<p><strong>包含tableData:</strong> ${'tableData' in data ? '⚠️ 意外包含' : '✅ 正确不包含'}</p>`;
+                
+                result += '<h4>完整响应数据:</h4>';
+                result += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = result;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<h3>❌ 测试失败</h3><p>${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

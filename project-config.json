@@ -16,9 +16,22 @@
       "port": 5004,
       "path": "/demo_1",
       "title": "股票仪表盘演示",
-      "serverFile": "show_plate_server_v2.py",
+      "serverFile": "show_plate_server_multiplate_v2.py",
       "component": "StockDashboard",
       "taskLabel": "演示服务器",
+      "enabled": true
+    },
+    {
+      "id": "stacked_area_demo",
+      "name": "堆叠面积图演示",
+      "description": "三维数据可视化堆叠面积图组件演示",
+      "icon": "📊",
+      "port": 5007,
+      "path": "/stacked-area-demo",
+      "title": "堆叠面积图组件演示",
+      "serverFile": "stacked_area_demo_server.py",
+      "component": "StackedAreaDemo",
+      "taskLabel": "堆叠面积图演示服务器",
       "enabled": true
     }
   ],

@@ -28,7 +28,11 @@ echo "✅ 依赖包检查完成"
 echo "[3/4] 启动后端API服务..."
 
 # 启动演示仪表盘服务
-gnome-terminal --title="演示仪表盘 (端口5004)" -- bash -c "echo '启动演示仪表盘服务...'; python3 api/show_plate_server_v2.py 5004; exec bash" &
+gnome-terminal --title="演示仪表盘 (端口5004)" -- bash -c "echo '启动演示仪表盘服务...'; python3 api/show_plate_server_multiplate_v2.py; exec bash" &
+sleep 2
+
+# 启动堆叠面积图演示服务
+gnome-terminal --title="堆叠面积图演示 (端口5007)" -- bash -c "echo '启动堆叠面积图演示服务...'; python3 api/stacked_area_demo_server.py; exec bash" &
 sleep 2
 
 echo "✅ 后端服务启动完成"

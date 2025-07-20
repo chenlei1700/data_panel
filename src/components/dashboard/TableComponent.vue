@@ -108,7 +108,7 @@ export default defineComponent({
     
     // 内置的背景色计算函数
     const backgroundColorFunctions = {
-      // 数值热力图 - 根据数值大小显示不同颜色
+      // 数值热力图 - 根据数值大小显示不同颜色（绿色=小值，红色=大值）
       heatmap: (value, column, row, allRows) => {
         if (value === null || value === undefined || isNaN(value)) return 'transparent';
         
@@ -124,13 +124,20 @@ export default defineComponent({
         
         if (min === max) return 'transparent';
         
-        const ratio = (numValue - min) / (max - min);
-        const intensity = Math.round(255 * (1 - ratio * 0.8)); // 0.8 控制最深颜色
+        const ratio = (numValue - min) / (max - min); // 0到1之间，0为最小值，1为最大值
         
-        return `rgb(255, ${intensity}, ${intensity})`;
+        if (ratio <= 0.5) {
+          // 小值区域：绿色到黄色过渡
+          const intensity = Math.round(255 * (ratio * 2));
+          return `rgba(${intensity}, 255, 0, 0.6)`;
+        } else {
+          // 大值区域：黄色到红色过渡
+          const intensity = Math.round(255 * (1 - (ratio - 0.5) * 2));
+          return `rgba(255, ${intensity}, 0, 0.6)`;
+        }
       },
       
-      // 绿红色阶 - 正值绿色，负值红色
+      // 绿红色阶 - 负值绿色（小值），正值红色（大值）
       redGreen: (value, column, row, allRows) => {
         if (value === null || value === undefined || isNaN(value)) return 'transparent';
         
@@ -146,18 +153,18 @@ export default defineComponent({
         
         const ratio = Math.abs(numValue) / maxAbs * 0.6; // 0.6 控制颜色深度
         
-        if (numValue < 0) {
-          // 正值 - 红色
-          const intensity = Math.round(255 * (1 - ratio));
-          return `rgb(${intensity}, 255, ${intensity})`;
-        } else {
-          // 负值 - 绿色
+        if (numValue > 0) {
+          // 正值（大值） - 红色
           const intensity = Math.round(255 * (1 - ratio));
           return `rgb(255, ${intensity}, ${intensity})`;
+        } else {
+          // 负值（小值） - 绿色
+          const intensity = Math.round(255 * (1 - ratio));
+          return `rgb(${intensity}, 255, ${intensity})`;
         }
       },
       
-      // 百分比色阶
+      // 百分比色阶（绿色=负百分比即小值，红色=正百分比即大值）
       percentage: (value, column, row, allRows) => {
         if (value === null || value === undefined) return 'transparent';
         
@@ -166,24 +173,20 @@ export default defineComponent({
         
         // 假设百分比值在 -100 到 100 之间
         const normalizedValue = Math.max(-100, Math.min(100, numValue));
-        const ratio = (normalizedValue + 100) / 200; // 转换到 0-1 范围
+        const ratio = (normalizedValue + 100) / 200; // 转换到 0-1 范围，0为-100%，1为+100%
         
-        // 创建从红到黄到绿的渐变
+        // 创建从绿到黄到红的渐变（绿=负值/小值，红=正值/大值）
         if (ratio < 0.5) {
-          // 红到黄 (ratio 0-0.5)
-          const r = 255;
-          const g = Math.round(255 * ratio * 2);
-          const b = 0;
-          return `rgba(${r}, ${g}, ${b}, 0.3)`;
+          // 绿到黄 (ratio 0-0.5，对应-100%到0%)
+          const intensity = Math.round(255 * ratio * 2);
+          return `rgba(${intensity}, 255, 0, 0.4)`;
         } else {
-          // 黄到绿 (ratio 0.5-1)
-          const r = Math.round(255 * (1 - (ratio - 0.5) * 2));
-          const g = 255;
-          const b = 0;
-          return `rgba(${r}, ${g}, ${b}, 0.3)`;
+          // 黄到红 (ratio 0.5-1，对应0%到+100%)
+          const intensity = Math.round(255 * (1 - (ratio - 0.5) * 2));
+          return `rgba(255, ${intensity}, 0, 0.4)`;
         }
       },
-        // 等级色阶 - 根据值的排名显示颜色
+        // 等级色阶 - 根据值的排名显示颜色（绿色=高排名即小值，红色=低排名即大值）
       rank: (value, column, row, allRows) => {
         if (value === null || value === undefined) return 'transparent';
         
@@ -196,10 +199,17 @@ export default defineComponent({
         
         if (rank === -1) return 'transparent';
         
-        const ratio = rank / (columnValues.length - 1);
-        const intensity = Math.round(255 * (0.2 + ratio * 0.6)); // 颜色范围控制
+        const ratio = rank / (columnValues.length - 1); // 0为第一名（最大值），1为最后一名（最小值）
         
-        return `rgb(${intensity}, ${intensity}, 255)`;
+        if (ratio <= 0.5) {
+          // 前半部分排名（大值）：黄色到红色
+          const intensity = Math.round(255 * (1 - ratio * 2));
+          return `rgba(255, ${intensity}, 0, 0.6)`;
+        } else {
+          // 后半部分排名（小值）：黄色到绿色
+          const intensity = Math.round(255 * ((ratio - 0.5) * 2));
+          return `rgba(${255 - intensity}, 255, 0, 0.6)`;
+        }
       },
 
       // 自定义函数：股票强势度综合评分着色
@@ -313,14 +323,14 @@ export default defineComponent({
         // 计算Z-score (标准分数)
         const zScore = (currentValue - avg) / stdDev;
         
-        // 根据Z-score着色
-        if (zScore > 2) return 'rgba(255, 0, 0, 0.8)';        // 显著高于平均 - 深红
-        if (zScore > 1) return 'rgba(255, 69, 0, 0.6)';       // 高于平均 - 橙红
-        if (zScore > 0.5) return 'rgba(255, 140, 0, 0.4)';    // 略高于平均 - 橙色
-        if (zScore > -0.5) return 'rgba(144, 238, 144, 0.3)'; // 接近平均 - 浅绿
-        if (zScore > -1) return 'rgba(255, 182, 193, 0.4)';   // 略低于平均 - 浅红
-        if (zScore > -2) return 'rgba(176, 196, 222, 0.6)';   // 低于平均 - 浅蓝
-        return 'rgba(105, 105, 105, 0.8)';                    // 显著低于平均 - 灰色
+        // 根据Z-score着色（绿色=低于平均的小值，红色=高于平均的大值）
+        if (zScore > 2) return 'rgba(255, 0, 0, 0.8)';        // 显著高于平均（大值） - 深红
+        if (zScore > 1) return 'rgba(255, 69, 0, 0.6)';       // 高于平均（大值） - 橙红
+        if (zScore > 0.5) return 'rgba(255, 140, 0, 0.4)';    // 略高于平均（大值） - 橙色
+        if (zScore > -0.5) return 'rgba(255, 255, 224, 0.3)'; // 接近平均 - 浅黄
+        if (zScore > -1) return 'rgba(144, 238, 144, 0.4)';   // 略低于平均（小值） - 浅绿
+        if (zScore > -2) return 'rgba(0, 255, 0, 0.6)';       // 低于平均（小值） - 绿色
+        return 'rgba(0, 128, 0, 0.8)';                        // 显著低于平均（小值） - 深绿
       },
 
       // 自定义函数：技术指标综合评分着色
@@ -426,6 +436,157 @@ export default defineComponent({
         if (marketCap > 2000000000) return 'rgba(255, 255, 224, 0.6)';   // 浅黄 - 小盘股
         // 微盘股 (市值 < 20亿)
         return 'rgba(255, 192, 203, 0.6)';                              // 粉色 - 微盘股
+      },
+
+      // 无背景色
+      none: (value, column, row, allRows) => {
+        return 'transparent';
+      },
+
+      // 高低值背景色（绿色=低值，红色=高值）
+      highLow: (value, column, row, allRows) => {
+        if (value === null || value === undefined || isNaN(value)) return 'transparent';
+        
+        const numValue = parseFloat(value);
+        const columnValues = allRows
+          .map(r => parseFloat(r[column.field]))
+          .filter(v => !isNaN(v));
+        
+        if (columnValues.length === 0) return 'transparent';
+        
+        const max = Math.max(...columnValues);
+        const min = Math.min(...columnValues);
+        
+        if (max === min) return 'transparent';
+        
+        const range = max - min;
+        const percentile = (numValue - min) / range;
+        
+        if (percentile >= 0.8) return 'rgba(255, 0, 0, 0.3)';    // 高值 - 红色
+        if (percentile <= 0.2) return 'rgba(0, 255, 0, 0.3)';    // 低值 - 绿色
+        return 'transparent';
+      },
+
+      // 范围背景色（绿色=小值，红色=大值的渐变）
+      range: (value, column, row, allRows) => {
+        if (value === null || value === undefined || isNaN(value)) return 'transparent';
+        
+        const numValue = parseFloat(value);
+        const columnValues = allRows
+          .map(r => parseFloat(r[column.field]))
+          .filter(v => !isNaN(v));
+        
+        if (columnValues.length === 0) return 'transparent';
+        
+        const max = Math.max(...columnValues);
+        const min = Math.min(...columnValues);
+        const range = max - min;
+        
+        if (range === 0) return 'transparent';
+        
+        const ratio = (numValue - min) / range; // 0为最小值，1为最大值
+        
+        // 从绿色到红色的渐变：绿色(0,255,0) -> 黄色(255,255,0) -> 红色(255,0,0)
+        if (ratio <= 0.5) {
+          // 绿到黄
+          const intensity = Math.round(255 * ratio * 2);
+          return `rgba(${intensity}, 255, 0, 0.4)`;
+        } else {
+          // 黄到红
+          const intensity = Math.round(255 * (1 - (ratio - 0.5) * 2));
+          return `rgba(255, ${intensity}, 0, 0.4)`;
+        }
+      },
+
+      // 性能对比背景色 (与行业均值对比)
+      performance: (value, column, row, allRows) => {
+        if (value === null || value === undefined || isNaN(value)) return 'transparent';
+        
+        const numValue = parseFloat(value);
+        
+        // 查找行业均值列（优先查找明确的字段名）
+        let industryAvgValue = null;
+        
+        // 首先尝试查找明确的行业均值字段
+        if (row['行业均值'] !== undefined) {
+          industryAvgValue = row['行业均值'];
+        } else if (row['industry_avg'] !== undefined) {
+          industryAvgValue = row['industry_avg'];
+        } else {
+          // 作为后备方案，使用最后一列
+          const keys = Object.keys(row);
+          industryAvgValue = row[keys[keys.length - 1]];
+        }
+        
+        if (industryAvgValue === null || industryAvgValue === undefined || isNaN(industryAvgValue)) {
+          return 'transparent';
+        }
+        
+        const avgValue = parseFloat(industryAvgValue);
+        const diff = numValue - avgValue;
+        const diffRatio = avgValue !== 0 ? Math.abs(diff / avgValue) : 0;
+        
+        if (diff > 0) {
+          // 高于均值 - 红色（大值用红色）
+          const intensity = Math.min(0.6, diffRatio * 2);
+          return `rgba(255, 0, 0, ${intensity})`;
+        } else if (diff < 0) {
+          // 低于均值 - 绿色（小值用绿色）
+          const intensity = Math.min(0.6, diffRatio * 2);
+          return `rgba(0, 255, 0, ${intensity})`;
+        }
+        
+        return 'transparent';
+      },
+
+      // 状态背景色
+      status: (value, column, row, allRows) => {
+        if (!value) return 'transparent';
+        
+        const status = value.toString().toLowerCase();
+        
+        if (status.includes('正常') || status.includes('normal')) {
+          return 'rgba(0, 255, 0, 0.3)';    // 绿色
+        } else if (status.includes('警告') || status.includes('warning')) {
+          return 'rgba(255, 255, 0, 0.3)';  // 黄色
+        } else if (status.includes('异常') || status.includes('error') || status.includes('错误')) {
+          return 'rgba(255, 0, 0, 0.3)';    // 红色
+        }
+        
+        return 'transparent';
+      },
+
+      // 阈值背景色
+      threshold: (value, column, row, allRows) => {
+        if (value === null || value === undefined || isNaN(value)) return 'transparent';
+        
+        const numValue = parseFloat(value);
+        const thresholds = column.thresholds || [50, 100];
+        
+        if (numValue <= thresholds[0]) {
+          return 'rgba(0, 255, 0, 0.3)';    // 低于第一个阈值 - 绿色
+        } else if (numValue <= thresholds[1]) {
+          return 'rgba(255, 255, 0, 0.3)';  // 介于两个阈值之间 - 黄色
+        } else {
+          return 'rgba(255, 0, 0, 0.3)';    // 高于第二个阈值 - 红色
+        }
+      },
+
+      // 使用率背景色
+      utilization: (value, column, row, allRows) => {
+        if (value === null || value === undefined || isNaN(value)) return 'transparent';
+        
+        const percentage = parseFloat(value);
+        
+        if (percentage >= 90) {
+          return 'rgba(255, 0, 0, 0.5)';      // 高使用率 - 红色
+        } else if (percentage >= 75) {
+          return 'rgba(255, 165, 0, 0.4)';    // 较高使用率 - 橙色
+        } else if (percentage >= 50) {
+          return 'rgba(255, 255, 0, 0.3)';    // 中等使用率 - 黄色
+        } else {
+          return 'rgba(0, 255, 0, 0.3)';      // 低使用率 - 绿色
+        }
       }
     };
     
@@ -482,33 +643,50 @@ export default defineComponent({
     const visibleColumns = computed(() => {
       const columns = apiData.value.columns || [];
       
-      // 检查columns是否是字符串数组（后端返回格式）
+      // 检查columns是否是字符串数组（旧格式）
       if (columns.length > 0 && typeof columns[0] === 'string') {
         // 将字符串数组转换为对象数组
         return columns.map(columnName => ({
           field: columnName,
-          header: columnName
+          header: columnName,
+          backgroundColor: 'none'  // 默认无背景色
         }));
       }
       
-      // 如果已经是对象数组，过滤掉visible为false的列
-      return columns.filter(column => column.visible !== false);
+      // 如果已经是对象数组（推荐格式，直接包含backgroundColor配置）
+      if (columns.length > 0 && typeof columns[0] === 'object') {
+        // 直接使用对象数组，每个对象已包含field, header, backgroundColor等属性
+        return columns.filter(column => column.visible !== false);
+      }
+      
+      // 兜底情况
+      return [];
     });
     
     // 基于排序条件的计算属性
     const sortedRows = computed(() => {
       if (!apiData.value.rows || !apiData.value.columns) return [];
       
-      // 将二维数组转换为对象数组
-      const objectRows = apiData.value.rows.map(row => {
-        const obj = {};
-        apiData.value.columns.forEach((column, index) => {
-          // 无论column是字符串还是对象，都使用统一的方式处理
-          const columnKey = typeof column === 'string' ? column : column.field;
-          obj[columnKey] = row[index];
+      // 检查rows的格式
+      if (apiData.value.rows.length === 0) return [];
+      
+      let objectRows;
+      
+      // 如果rows已经是对象数组，直接使用
+      if (typeof apiData.value.rows[0] === 'object' && !Array.isArray(apiData.value.rows[0])) {
+        objectRows = apiData.value.rows;
+      } else {
+        // 如果rows是二维数组，转换为对象数组
+        objectRows = apiData.value.rows.map(row => {
+          const obj = {};
+          apiData.value.columns.forEach((column, index) => {
+            // 无论column是字符串还是对象，都使用统一的方式处理
+            const columnKey = typeof column === 'string' ? column : column.field;
+            obj[columnKey] = row[index];
+          });
+          return obj;
         });
-        return obj;
-      });
+      }
       
       if (!sortKey.value) return objectRows;
       

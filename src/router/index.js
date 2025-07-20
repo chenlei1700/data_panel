@@ -3,6 +3,7 @@
 
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import StackedAreaDemo from '../views/StackedAreaDemo.vue'
 import StockDashboard from '../views/StockDashboard.vue'
 
 const routes = [
@@ -20,6 +21,15 @@ const routes = [
       apiService: 'demo_1'  // 对应API配置中的键名，使用端口5004
     }
   },
+  {
+    path: '/stacked-area-demo',
+    name: 'stacked_area_demo',
+    component: StackedAreaDemo,
+    meta: {
+      title: '堆叠面积图组件演示',
+      apiService: 'stacked_area_demo'  // 对应API配置中的键名，使用端口5007
+    }
+  },
 ]
 
 const router = createRouter({
@@ -29,7 +39,7 @@ const router = createRouter({
 
 // 设置页面标题
 router.beforeEach((to, from, next) => {
-  if (to.meta && to.meta.title) {
+  if (to.meta?.title) {
     document.title = to.meta.title
   }
   next()
