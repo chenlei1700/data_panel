@@ -741,7 +741,7 @@ export default defineComponent({
         console.log('使用直接传入的数据');
         apiData.value = props.componentConfig.apiData;
         loading.value = false;
-        return;
+        return Promise.resolve();
       }
       
       loading.value = true;
@@ -811,10 +811,13 @@ export default defineComponent({
           apiData.value = { rows: [], columns: [] };
           error.value = '返回数据为空';
         }
+        
+        return Promise.resolve(); // 成功时返回resolved promise
       } catch (err) {
         console.error('获取表格数据失败:', err);
         error.value = '加载数据失败: ' + (err.message || '未知错误');
         apiData.value = { rows: [], columns: [] };
+        return Promise.reject(err); // 失败时返回rejected promise
       } finally {
         loading.value = false;
         
@@ -828,6 +831,14 @@ export default defineComponent({
       }
     };
       const updateDashboard = async (sector) => {
+      // 防止在组件初始化阶段重复调用
+      if (isRefreshing) {
+        console.log(`⏱️ [${new Date().toISOString()}] 组件正在刷新中，跳过updateDashboard调用`);
+        return;
+      }
+      
+      // 添加调用栈跟踪
+      console.log(`⏱️ [${new Date().toISOString()}] updateDashboard被调用，调用栈:`, new Error().stack);
       console.log(`⏱️ [${new Date().toISOString()}] 开始向服务器发送板块更新请求: ${sector}`);
       
       // 获取当前服务的端口（从组件的数据源URL中提取）
@@ -905,9 +916,9 @@ export default defineComponent({
         const url = new URL(currentDataSource);
         url.searchParams.set('_refresh', Date.now().toString());
         console.log(`⏱️ [${new Date().toISOString()}] 添加刷新参数后的数据源:`, url.toString());
-        fetchData(url.toString());
+        return fetchData(url.toString());
       } else {
-        fetchData();
+        return fetchData();
       }
     };
     
@@ -928,17 +939,86 @@ export default defineComponent({
         window.updateSectorDashboard = (sector) => {
           if (sector) {
             console.log(`⏱️ [${new Date().toISOString()}] 全局函数被调用，更新板块: ${sector}`);
-            updateDashboard(sector);
+            // 只在组件完全加载后才执行updateDashboard，避免与初始化冲突
+            if (document.readyState === 'complete') {
+              updateDashboard(sector);
+            } else {
+              console.log(`⏱️ [${new Date().toISOString()}] 文档未完全加载，跳过全局更新调用`);
+            }
           }
         };
         
         window.updateSectorDashboardSet = true; // 标记已设置
       }
       
+      // 防止重复刷新的控制变量
+      let isRefreshing = false;
+      let refreshTimer = null;
+      
+      // 统一的刷新处理函数，避免重复刷新
+      const handleRefresh = (eventType, update, delay = 200) => {
+        console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 接收到${eventType}事件:`, update);
+        
+        // 记录手动刷新时间（非自动更新时）
+        if (!update || update.type !== 'auto_update') {
+          window.lastManualRefresh = Date.now();
+        }
+        
+        // 如果正在刷新，清除之前的定时器
+        if (refreshTimer) {
+          clearTimeout(refreshTimer);
+          refreshTimer = null;
+        }
+        
+        // 如果正在刷新中，跳过此次请求
+        if (isRefreshing) {
+          console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 正在刷新中，跳过重复请求`);
+          return;
+        }
+        
+        // 设置刷新定时器
+        refreshTimer = setTimeout(() => {
+          if (isRefreshing) return; // 双重检查
+          
+          isRefreshing = true;
+          console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 开始刷新数据...`);
+          
+          refreshData().finally(() => {
+            // 刷新完成后重置状态，允许下次刷新
+            setTimeout(() => {
+              isRefreshing = false;
+            }, 1000); // 1秒内禁止重复刷新
+          });
+          
+          refreshTimer = null;
+        }, delay);
+      };
+      
       // 添加仪表盘更新事件监听
       const handleDashboardUpdate = (event) => {
         const update = event.detail;
-        console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 接收到仪表盘更新事件:`, update);
+        
+        // 过滤掉系统消息，避免不必要的刷新
+        if (update && (update.type === 'connection_established' || update.type === 'heartbeat')) {
+          console.log(`⏱️ [${new Date().toISOString()}] 表格组件 ${props.componentConfig.id} 忽略系统消息:`, update.type);
+          return;
+        }
+        
+        // 过滤掉自动更新事件，避免与手动刷新冲突
+        if (update && update.type === 'auto_update') {
+          // 如果正在刷新中，跳过自动更新
+          if (isRefreshing) {
+            console.log(`⏱️ [${new Date().toISOString()}] 表格组件 ${props.componentConfig.id} 正在手动刷新中，忽略自动更新:`, update);
+            return;
+          }
+          // 如果最近刚刷新过（10秒内），也跳过自动更新
+          const now = Date.now();
+          const timeSinceLastRefresh = now - (window.lastManualRefresh || 0);
+          if (timeSinceLastRefresh < 10000) {
+            console.log(`⏱️ [${new Date().toISOString()}] 表格组件 ${props.componentConfig.id} 最近刚手动刷新过(${timeSinceLastRefresh}ms前)，忽略自动更新:`, update);
+            return;
+          }
+        }
         
         // 检查是否需要刷新当前组件
         if (update && (
@@ -946,23 +1026,24 @@ export default defineComponent({
           update.action === 'reload_config' ||
           update.action === 'force_refresh'
         )) {
-          console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 开始刷新数据...`);
-          setTimeout(() => {
-            refreshData();
-          }, 200); // 稍微延迟，确保配置更新完成
+          console.log(`⏱️ [${new Date().toISOString()}] 表格组件 ${props.componentConfig.id} 将处理更新:`, update);
+          handleRefresh('仪表盘更新', update, 200);
+        } else {
+          console.log(`⏱️ [${new Date().toISOString()}] 表格组件 ${props.componentConfig.id} 跳过不相关更新:`, update);
         }
       };
       
-      // 添加配置更新事件监听
+      // 添加配置更新事件监听  
       const handleConfigUpdate = (event) => {
         const update = event.detail;
-        console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 接收到配置更新事件:`, update);
         
-        // 配置更新后刷新数据
-        setTimeout(() => {
-          console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 因配置更新而刷新数据...`);
-          refreshData();
-        }, 500); // 给配置更新更多时间
+        // 只有在不是reload_config触发的配置更新时才刷新
+        // 因为reload_config已经通过handleDashboardUpdate处理了
+        if (update && update.action !== 'reload_config') {
+          handleRefresh('配置更新', update, 300);
+        } else {
+          console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 跳过reload_config触发的配置更新事件`);
+        }
       };
       
       window.addEventListener('dashboard-update', handleDashboardUpdate);

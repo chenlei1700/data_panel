@@ -30,13 +30,129 @@
       
       const resizeObserver = ref(null);
       
-      const loadChartData = async () => {
+      // 防止重复刷新的控制变量
+      let isRefreshing = false;
+      let refreshTimer = null;
+      
+      // 事件处理函数引用，用于清理
+      let handleDashboardUpdate = null;
+      let handleConfigUpdate = null;
+      
+      // 获取组件刷新延迟
+      const getComponentDelay = () => {
+        return props.componentConfig.id ? Math.min(100 * parseInt(props.componentConfig.id.toString().replace(/\D/g, '')), 2000) : 0;
+      };
+      
+      // 刷新数据方法
+      const refreshData = () => {
+        console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 正在刷新图表数据...`);
+        console.log(`⏱️ [${new Date().toISOString()}] 当前数据源:`, props.componentConfig.dataSource);
+        
+        // 在数据源URL中添加时间戳防止缓存
+        const currentDataSource = props.componentConfig.dataSource;
+        if (currentDataSource) {
+          const url = new URL(currentDataSource);
+          url.searchParams.set('_refresh', Date.now().toString());
+          console.log(`⏱️ [${new Date().toISOString()}] 添加刷新参数后的数据源:`, url.toString());
+          return loadChartData(url.toString());
+        } else {
+          return loadChartData();
+        }
+      };
+      
+      // 统一的刷新处理函数，避免重复刷新
+      const handleRefresh = (eventType, update, delay = 200) => {
+        console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 接收到${eventType}事件:`, update);
+        
+        // 如果正在刷新，清除之前的定时器
+        if (refreshTimer) {
+          clearTimeout(refreshTimer);
+          refreshTimer = null;
+        }
+        
+        // 如果正在刷新中，跳过此次请求
+        if (isRefreshing) {
+          console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 正在刷新中，跳过重复请求`);
+          return;
+        }
+        
+        // 设置刷新定时器
+        refreshTimer = setTimeout(() => {
+          if (isRefreshing) return; // 双重检查
+          
+          isRefreshing = true;
+          console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 开始刷新数据...`);
+          
+          refreshData().finally(() => {
+            // 刷新完成后重置状态，允许下次刷新
+            setTimeout(() => {
+              isRefreshing = false;
+            }, 1000); // 1秒内禁止重复刷新
+          });
+          
+          refreshTimer = null;
+        }, delay);
+      };
+      
+      // 创建事件处理函数
+      const createEventHandlers = () => {
+        // 仪表盘更新事件监听
+        handleDashboardUpdate = (event) => {
+          const update = event.detail;
+          
+          // 过滤掉系统消息，避免不必要的刷新
+          if (update && (update.type === 'connection_established' || update.type === 'heartbeat')) {
+            console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 忽略系统消息:`, update.type);
+            return;
+          }
+          
+          // 检查是否需要刷新当前组件
+          if (update && (
+            update.componentId === props.componentConfig.id || 
+            update.action === 'reload_config' ||
+            update.action === 'force_refresh'
+          )) {
+            console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 将处理更新:`, update);
+            handleRefresh('仪表盘更新', update, 200);
+          } else {
+            console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 跳过不相关更新:`, update);
+          }
+        };
+        
+        // 配置更新事件监听  
+        handleConfigUpdate = (event) => {
+          const update = event.detail;
+          
+          // 只有在不是reload_config触发的配置更新时才刷新
+          if (update && update.action !== 'reload_config') {
+            handleRefresh('配置更新', update, 300);
+          } else {
+            console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 跳过reload_config触发的配置更新事件`);
+          }
+        };
+      };
+      
+      const loadChartData = async (url) => {
         loading.value = true;
         error.value = null;
         
+        const targetUrl = url || props.componentConfig.dataSource;
+        console.log('开始加载图表数据，URL:', targetUrl);
+        
         try {
-          console.log('开始加载图表数据');
-          const response = await axios.get(props.componentConfig.dataSource);
+          // 构建带有componentId参数的URL
+          const urlObj = new URL(targetUrl);
+          
+          // 添加componentId参数
+          if (props.componentConfig.id) {
+            urlObj.searchParams.set('componentId', props.componentConfig.id);
+            console.log('添加componentId参数:', props.componentConfig.id);
+          }
+          
+          const finalUrl = urlObj.toString();
+          console.log('最终请求URL:', finalUrl);
+          
+          const response = await axios.get(finalUrl);
           chartData.value = response.data;
           console.log('收到的图表数据:', chartData.value);
           
@@ -186,7 +302,18 @@
       
       onMounted(() => {
         console.log('ChartComponent 挂载完成, chartContainer:', chartContainer.value);
-        loadChartData();
+        
+        const componentDelay = getComponentDelay();
+        console.log(`⏱️ [${new Date().toISOString()}] 图表组件 ${props.componentConfig.id} 将在 ${componentDelay}ms 后开始加载数据`);
+        
+        setTimeout(() => {
+          loadChartData();
+        }, componentDelay);
+        
+        // 创建并注册事件处理函数
+        createEventHandlers();
+        window.addEventListener('dashboard-update', handleDashboardUpdate);
+        window.addEventListener('dashboard-config-updated', handleConfigUpdate);
         
         // 添加窗口大小变化的响应式处理
         nextTick(() => {
@@ -228,6 +355,17 @@
       });
       
       onUnmounted(() => {
+        // 清理定时器
+        if (refreshTimer) {
+          clearTimeout(refreshTimer);
+          refreshTimer = null;
+        }
+        
+        // 清理事件监听器
+        window.removeEventListener('dashboard-update', handleDashboardUpdate);
+        window.removeEventListener('dashboard-config-updated', handleConfigUpdate);
+        
+        // 清理ResizeObserver
         if (resizeObserver.value) {
           resizeObserver.value.disconnect();
         }
@@ -241,7 +379,10 @@
       return {
         chartContainer,
         loading,
-        error
+        error,
+        refreshData,
+        handleRefresh,
+        getComponentDelay
       };
     }
   });

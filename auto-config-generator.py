@@ -18,9 +18,16 @@ from datetime import datetime
 class ConfigGenerator:
     def __init__(self, config_file: str = "project-config.json"):
         """初始化配置生成器"""
-        self.config_file = config_file
+        # 确保配置文件路径相对于脚本所在目录
+        self.script_dir = Path(__file__).parent
+        if not os.path.isabs(config_file):
+            self.config_file = str(self.script_dir / config_file)
+        else:
+            self.config_file = config_file
+        
         self.config = self.load_config()
-        self.project_root = Path.cwd()
+        # data_panel目录就是项目根目录
+        self.project_root = self.script_dir
         
     def load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
@@ -624,10 +631,11 @@ h2 {
             "tasks": []
         }
         
-        # 获取API基础路径，如果是相对路径则转换为绝对路径
+        # 获取API基础路径，现在data_panel是项目根目录
         api_base_path = self.config['developmentConfig']['apiBasePath']
+        # 如果是相对路径，相对于data_panel目录（项目根目录）
         if not os.path.isabs(api_base_path):
-            api_base_path = os.path.abspath(api_base_path)
+            api_base_path = str(self.project_root / api_base_path)
         
         # 1. 一键启动所有服务的主任务
         backend_tasks = []
@@ -993,7 +1001,9 @@ npm run serve"""
 
 def add_new_service():
     """交互式添加新服务"""
-    config_file = "project-config.json"
+    # 确保配置文件路径相对于脚本所在目录
+    script_dir = Path(__file__).parent
+    config_file = str(script_dir / "project-config.json")
     
     # 加载现有配置
     try:

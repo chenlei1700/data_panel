@@ -16,11 +16,14 @@ import plotly.graph_objects as go
 import os
 import sys
 import queue
+import hashlib
+from typing import Dict, Any
 from flask import request, Response, jsonify
 from flask_cors import CORS
 
 # 导入新框架基类
 from base_server import BaseStockServer
+from server_config import get_server_config, create_auto_update_config
 
 # 将项目根目录添加到sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,13 +35,33 @@ from stock_data.stock_minute import StockMinuteData
 from strategy.strategy001.板块信息显示 import plot_stock_line_charts
 
 class MultiPlateStockServer(BaseStockServer):
-    """多板块股票服务器 - 继承自BaseStockServer"""
+    """多板块股票服务器 - 继承自BaseStockServer，使用基类的缓存机制"""
     
-    def __init__(self, port=5008):
-        super().__init__(port=port, service_name="多板块股票仪表盘")
+    def __init__(self, port=None, auto_update_config=None):
+        # 从配置文件获取服务器配置
+        server_config = get_server_config("multiplate")
+        
+        # 使用配置文件中的端口，如果未指定则使用参数或默认值
+        if port is None:
+            port = server_config.get("port", 5007)
+        
+        # 使用配置文件中的自动更新配置，允许参数覆盖
+        if auto_update_config is None:
+            auto_update_config = server_config.get("auto_update_config", {})
+        else:
+            # 合并配置文件配置和参数配置
+            file_config = server_config.get("auto_update_config", {})
+            file_config.update(auto_update_config)
+            auto_update_config = file_config
+        
+        server_name = server_config.get("name", "多板块股票仪表盘")
+        
+        super().__init__(port=port, name=server_name, auto_update_config=auto_update_config)
         
         # 服务特定的配置
-        self.data_cache = DataCache()
+        self.data_cache = DataCache()  # 使用现有的DataCache
+        # response_cache已经在基类中初始化了，无需重复初始化
+        
         self.dynamic_titles = {
             "table2": "股票数据表",
             "table21": "股票数据表", 
@@ -61,6 +84,112 @@ class MultiPlateStockServer(BaseStockServer):
         
         # 读取自定义板块
         self.my_plate_list = self._get_my_plate()
+
+    def _get_source_data_for_endpoint(self, endpoint: str) -> Dict[str, Any]:
+        """重写源数据获取方法，为不同端点提供精确的源数据用于缓存判断"""
+        
+        # 获取请求参数
+        request_params = dict(request.args) if hasattr(request, 'args') else {}
+        
+        if "sector-line-chart_change" in endpoint:
+            # 板块涨幅折线图的源数据
+            sector_df = self.data_cache.load_data('plate_df')
+            latest_time = sector_df['时间'].max() if not sector_df.empty else None
+            return {
+                'endpoint': endpoint,
+                'data_time': str(latest_time),
+                'data_count': len(sector_df),
+                'sector_names': sorted(self._get_dynamic_titles_list()),
+                'dynamic_titles': self.dynamic_titles.copy(),
+                'file_timestamp': self.data_cache.timestamps.get('plate_df', 0),
+                'request_params': request_params
+            }
+            
+        elif "sector-line-chart_uplimit" in endpoint:
+            # 板块涨停折线图的源数据
+            sector_df = self.data_cache.load_data('plate_df')
+            latest_time = sector_df['时间'].max() if not sector_df.empty else None
+            return {
+                'endpoint': endpoint,
+                'data_time': str(latest_time),
+                'data_count': len(sector_df),
+                'sector_names': sorted(self._get_dynamic_titles_list()),
+                'dynamic_titles': self.dynamic_titles.copy(),
+                'file_timestamp': self.data_cache.timestamps.get('plate_df', 0),
+                'request_params': request_params
+            }
+            
+        elif "sector-line-chart_uprate" in endpoint:
+            # 板块红盘率折线图的源数据
+            sector_df = self.data_cache.load_data('plate_df')
+            latest_time = sector_df['时间'].max() if not sector_df.empty else None
+            return {
+                'endpoint': endpoint,
+                'data_time': str(latest_time),
+                'data_count': len(sector_df),
+                'sector_names': sorted(self._get_dynamic_titles_list()),
+                'dynamic_titles': self.dynamic_titles.copy(),
+                'file_timestamp': self.data_cache.timestamps.get('plate_df', 0),
+                'request_params': request_params
+            }
+            
+        elif "plate_info" in endpoint:
+            # 板块概要数据表的源数据
+            sector_name = request_params.get('sectors', '航运概念')
+            plate_df = self.data_cache.load_data('plate_df')
+            latest_time = plate_df['时间'].max() if not plate_df.empty else None
+            return {
+                'endpoint': endpoint,
+                'sector_name': sector_name,
+                'data_time': str(latest_time),
+                'data_count': len(plate_df),
+                'plate_summary': plate_df[['板块名', '板块涨幅', '板块5分涨速']].to_dict('records')[:10] if not plate_df.empty else [],
+                'request_params': request_params
+            }
+            
+        elif "stocks" in endpoint:
+            # 股票数据表的源数据
+            sector_name = request_params.get('sector_name', request_params.get('sectors', '航运概念'))
+            component_id = request_params.get('componentId', 'table2')
+            
+            stock_df = self.data_cache.load_data('stock_df')
+            affinity_df = self.data_cache.load_data('affinity_df')
+            
+            latest_time = stock_df['time'].max() if not stock_df.empty else None
+            
+            # 获取相关股票ID作为源数据的一部分
+            sector_stock_ids = []
+            if not affinity_df.empty:
+                sector_affinity_df = affinity_df[
+                    affinity_df['板块'].str.contains(sector_name, na=False, case=False) |
+                    affinity_df['板块'].apply(lambda x: sector_name in str(x) if pd.notna(x) else False)
+                ]
+                sector_stock_ids = sorted(sector_affinity_df['股票id'].tolist()) if not sector_affinity_df.empty else []
+            
+            return {
+                'endpoint': endpoint,
+                'sector_name': sector_name,
+                'component_id': component_id,
+                'stock_data_time': str(latest_time),
+                'stock_count': len(stock_df),
+                'sector_stock_ids': sector_stock_ids[:50],  # 限制数量以避免哈希过大
+                'dynamic_titles': self.dynamic_titles.copy(),
+                'request_params': request_params
+            }
+            
+        elif "up_limit" in endpoint:
+            # 涨停数据表的源数据
+            up_limit_df = self.data_cache.load_data('up_limit_df')
+            return {
+                'endpoint': endpoint,
+                'data_count': len(up_limit_df),
+                'file_timestamp': self.data_cache.timestamps.get('up_limit_df', 0),
+                'data_sample': up_limit_df.head(5).to_dict('records') if not up_limit_df.empty else [],
+                'request_params': request_params
+            }
+        
+        # 使用基类的默认实现
+        return super()._get_source_data_for_endpoint(endpoint)
 
     def _init_stock_data(self):
         """初始化股票数据"""
@@ -110,7 +239,7 @@ class MultiPlateStockServer(BaseStockServer):
                         "type": "chart",
                         "dataSource": "/api/chart-data/sector-line-chart_change",
                         "title": "板块涨幅折线图",
-                        "position": {"row": 0, "col": 0, "rowSpan": 1, "colSpan": 1}
+                        "position": {"row": 0, "col": 0, "rowSpan": 1, "colSpan": 2}
                     },
                     {
                         "id": "chart_speed",
@@ -164,14 +293,14 @@ class MultiPlateStockServer(BaseStockServer):
                         "position": {"row": 0, "col": 4, "rowSpan": 4, "colSpan": 1},
                         "height": "1000px"
                     },
-                    {
-                        "id": "stackedAreaChart1",
-                        "type": "stackedAreaChart",
-                        "dataSource": "/api/chart-data/stacked-area-sector",
-                        "title": "板块资金流向分析",
-                        "position": {"row": 4, "col": 4, "rowSpan": 1, "colSpan": 1},
-                        "height": "400px"
-                    }
+                    # {
+                    #     "id": "stackedAreaChart1",
+                    #     "type": "stackedAreaChart",
+                    #     "dataSource": "/api/chart-data/stacked-area-sector",
+                    #     "title": "板块资金流向分析",
+                    #     "position": {"row": 4, "col": 4, "rowSpan": 1, "colSpan": 1},
+                    #     "height": "400px"
+                    # }
                 ]
             }
         }
@@ -182,47 +311,47 @@ class MultiPlateStockServer(BaseStockServer):
             "/api/chart-data/sector-line-chart_change": {
                 "handler": "get_sector_chart_data_change",
                 "description": "板块涨幅折线图数据",
-                "cache_ttl": 30
+                "cache_ttl": 0
             },
             "/api/chart-data/sector-line-chart_uplimit": {
                 "handler": "get_sector_chart_data_uplimit", 
                 "description": "板块近似涨停折线图数据",
-                "cache_ttl": 30
+                "cache_ttl": 0
             },
             "/api/chart-data/sector-line-chart_uprate": {
                 "handler": "get_sector_chart_data_uprate",
                 "description": "板块红盘率折线图数据", 
-                "cache_ttl": 30
+                "cache_ttl": 0
             },
             "/api/chart-data/sector-line-chart_uprate5": {
                 "handler": "get_sector_chart_data_uprate5",
                 "description": "板块uprate5折线图数据",
-                "cache_ttl": 30
+                "cache_ttl": 0
             },
             "/api/table-data/sector_speed_chart": {
                 "handler": "get_sector_speed_chart",
                 "description": "板块涨速累加图表数据",
-                "cache_ttl": 30
+                "cache_ttl": 0
             },
             "/api/table-data/plate_info": {
                 "handler": "get_plate_info_table_data",
                 "description": "板块概要数据表",
-                "cache_ttl": 60
+                "cache_ttl": 0
             },
             "/api/table-data/stocks": {
                 "handler": "get_stocks_table_data", 
                 "description": "股票数据表",
-                "cache_ttl": 30
+                "cache_ttl": 0
             },
             "/api/table-data/up_limit": {
                 "handler": "get_up_limit_table_data",
                 "description": "涨停数据表",
-                "cache_ttl": 60
+                "cache_ttl": 0
             },
             "/api/chart-data/stacked-area-sector": {
                 "handler": "get_sector_stacked_area_data",
                 "description": "板块资金流向堆叠面积图数据",
-                "cache_ttl": 30
+                "cache_ttl": 0
             }
         }
 
@@ -248,18 +377,31 @@ class MultiPlateStockServer(BaseStockServer):
         self.app.add_url_rule('/api/debug/dynamic-titles',
                              'get_dynamic_titles_debug',
                              self.get_dynamic_titles_debug, methods=['GET'])
+        
+        # 缓存管理路由
+        self.app.add_url_rule('/api/cache/status',
+                             'get_cache_status',
+                             self.get_cache_status, methods=['GET'])
+        
+        self.app.add_url_rule('/api/cache/clear',
+                             'clear_cache',
+                             self.clear_cache, methods=['POST'])
 
     # ===== 数据处理方法 =====
     
     def get_sector_chart_data_change(self):
-        """返回板块涨幅折线图数据"""
+        """返回板块涨幅折线图数据 - 使用基类的自动缓存机制"""
         try:
             sector_names = self._get_dynamic_titles_list()
-            sector_df = pd.read_csv('strategy\\showhtml\\server\\good_plate_df.csv')
+            sector_df = self.data_cache.load_data('plate_df')
+            
+            if sector_df.empty:
+                return jsonify({"error": "板块数据文件读取失败"}), 500
             
             sector_df['时间'] = pd.to_datetime(sector_df['时间'])
             sector_df = sector_df[sector_df['时间'].dt.date == sector_df['时间'].dt.date.max()]
             
+            # 直接执行数据处理逻辑，缓存由基类自动处理
             chart_data = []
             latest_time = sector_df['时间'].max()
             temp_df = sector_df[sector_df['时间'] == latest_time]
@@ -297,11 +439,35 @@ class MultiPlateStockServer(BaseStockServer):
         """返回板块近似涨停折线图数据"""
         try:
             sector_names = self._get_dynamic_titles_list()
-            sector_df = pd.read_csv('strategy\\showhtml\\server\\good_plate_df.csv')
+            sector_df = self.data_cache.load_data('plate_df')
+            
+            if sector_df.empty:
+                return jsonify({"error": "板块数据文件读取失败"}), 500
             
             sector_df['时间'] = pd.to_datetime(sector_df['时间'])
             sector_df = sector_df[sector_df['时间'].dt.date == sector_df['时间'].dt.date.max()]
             
+            # 构建用于哈希比较的源数据
+            latest_time = sector_df['时间'].max()
+            source_data = {
+                'data_time': str(latest_time),
+                'data_count': len(sector_df),
+                'sector_names': sorted(sector_names),  # 排序确保一致性
+                'dynamic_titles': self.dynamic_titles.copy(),
+                'file_timestamp': self.data_cache.timestamps.get('plate_df', 0)  # 添加文件时间戳
+            }
+            
+            # 检查是否可以使用缓存
+            cache_endpoint = '/api/chart-data/sector-line-chart_uplimit'
+            should_cache, cached_response = self.response_cache.should_use_cache(
+                cache_endpoint, None, source_data
+            )
+            
+            if should_cache and cached_response:
+                self.logger.info("使用缓存数据返回板块近似涨停折线图")
+                return cached_response
+            
+            # 需要重新计算，继续执行原有逻辑
             # 添加近似涨停数列
             sector_df['近似涨停数'] = sector_df['涨幅分布'].apply(
                 lambda x: int(x.split('-')[-1]) if '-' in x else 0
@@ -325,7 +491,8 @@ class MultiPlateStockServer(BaseStockServer):
                         "y": sector_data['近似涨停数'].tolist()
                     })
             
-            return jsonify({
+            # 构建响应数据
+            response_data = jsonify({
                 "chartType": "line",
                 "data": chart_data,
                 "layout": {
@@ -335,6 +502,16 @@ class MultiPlateStockServer(BaseStockServer):
                     "legend": {"title": "板块名称"}
                 }
             })
+            
+            # 存储到缓存
+            self.response_cache.store_response(
+                cache_endpoint, 
+                None, 
+                source_data, 
+                response_data
+            )
+            
+            return response_data
         
         except Exception as e:
             self.logger.error(f"获取板块涨停数据失败: {e}")
@@ -344,10 +521,35 @@ class MultiPlateStockServer(BaseStockServer):
         """返回板块红盘率折线图数据"""
         try:
             sector_names = self._get_dynamic_titles_list()
-            sector_df = pd.read_csv('strategy\\showhtml\\server\\good_plate_df.csv')
+            sector_df = self.data_cache.load_data('plate_df')
+            
+            if sector_df.empty:
+                return jsonify({"error": "板块数据文件读取失败"}), 500
             
             sector_df['时间'] = pd.to_datetime(sector_df['时间'])
             sector_df = sector_df[sector_df['时间'].dt.date == sector_df['时间'].dt.date.max()]
+            
+            # 构建用于哈希比较的源数据
+            latest_time = sector_df['时间'].max()
+            source_data = {
+                'data_time': str(latest_time),
+                'data_count': len(sector_df),
+                'sector_names': sorted(sector_names),  # 排序确保一致性
+                'dynamic_titles': self.dynamic_titles.copy(),
+                'file_timestamp': self.data_cache.timestamps.get('plate_df', 0)  # 添加文件时间戳
+            }
+            
+            # 检查是否可以使用缓存
+            cache_endpoint = '/api/chart-data/sector-line-chart_uprate'
+            should_cache, cached_response = self.response_cache.should_use_cache(
+                cache_endpoint, None, source_data
+            )
+            
+            if should_cache and cached_response:
+                self.logger.info("使用缓存数据返回板块红盘率折线图")
+                return cached_response
+            
+            # 需要重新计算，继续执行原有逻辑
             sector_df['uprate'] = sector_df['涨幅分布'].apply(lambda x: self._calculate_tail_ratio(x, n=6))
             
             chart_data = []
@@ -368,7 +570,8 @@ class MultiPlateStockServer(BaseStockServer):
                         "y": sector_data['uprate'].tolist()
                     })
             
-            return jsonify({
+            # 构建响应数据
+            response_data = jsonify({
                 "chartType": "line",
                 "data": chart_data,
                 "layout": {
@@ -378,16 +581,59 @@ class MultiPlateStockServer(BaseStockServer):
                     "legend": {"title": "板块名称"}
                 }
             })
+            
+            # 存储到缓存
+            self.response_cache.store_response(
+                cache_endpoint, 
+                None, 
+                source_data, 
+                response_data
+            )
+            
+            return response_data
         
         except Exception as e:
             self.logger.error(f"获取板块红盘率数据失败: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    def get_cache_status(self):
+        """获取缓存状态信息"""
+        try:
+            cache_stats = self.response_cache.get_cache_stats()
+            return jsonify({
+                "status": "success",
+                "cache_stats": cache_stats
+            })
+        except Exception as e:
+            self.logger.error(f"获取缓存状态失败: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    def clear_cache(self):
+        """清理所有缓存"""
+        try:
+            # 清理响应缓存
+            initial_size = len(self.response_cache.cache)
+            self.response_cache.cache.clear()
+            self.response_cache.hash_cache.clear()
+            self.response_cache.access_times.clear()
+            
+            self.logger.info(f"缓存已清理，移除 {initial_size} 个条目")
+            return jsonify({
+                "status": "success", 
+                "message": f"缓存已清理，移除 {initial_size} 个条目"
+            })
+        except Exception as e:
+            self.logger.error(f"清理缓存失败: {e}")
             return jsonify({"error": str(e)}), 500
 
     def get_sector_chart_data_uprate5(self):
         """返回板块uprate5折线图数据"""
         try:
             sector_names = self._get_dynamic_titles_list()
-            sector_df = pd.read_csv('strategy\\showhtml\\server\\good_plate_df.csv')
+            sector_df = self.data_cache.load_data('plate_df')
+            
+            if sector_df.empty:
+                return jsonify({"error": "板块数据文件读取失败"}), 500
             
             sector_df['时间'] = pd.to_datetime(sector_df['时间'])
             sector_df = sector_df[sector_df['时间'].dt.date == sector_df['时间'].dt.date.max()]
@@ -447,6 +693,35 @@ class MultiPlateStockServer(BaseStockServer):
                     "message": "分钟数据文件读取失败"
                 })
             
+            # 构建用于哈希比较的源数据
+            stock_df['time'] = pd.to_datetime(stock_df['time'])
+            latest_time = stock_df['time'].max()
+            
+            source_data = {
+                'top_sectors': sorted(top_sectors[:10]),  # 只取前10个用于哈希，避免数据量过大
+                'stock_data_time': str(latest_time),
+                'stock_minute_count': len(stock_minute_df),
+                'file_timestamps': {
+                    'stock_df': self.data_cache.timestamps.get('stock_df', 0),
+                    'stock_minute_df': self.data_cache.timestamps.get('stock_minute_df', 0),
+                    'affinity_df': self.data_cache.timestamps.get('affinity_df', 0)
+                }
+            }
+            
+            # 检查是否可以使用缓存
+            cache_endpoint = '/api/table-data/sector_speed_chart'
+            should_cache, cached_response = self.response_cache.should_use_cache(
+                cache_endpoint, None, source_data
+            )
+            
+            if should_cache and cached_response:
+                self.logger.info("使用缓存数据返回板块涨速累加图表")
+                return cached_response
+            
+            # 需要重新计算，继续执行原有逻辑
+            self.logger.info(f"重新计算板块涨速数据，处理 {len(top_sectors)} 个板块")
+            
+            
             # 数据清理和预处理
             stock_df = stock_df.replace([np.inf, -np.inf], 0).fillna(0)
             stock_minute_df = stock_minute_df.replace([np.inf, -np.inf], 0).fillna(0)
@@ -469,7 +744,11 @@ class MultiPlateStockServer(BaseStockServer):
             
             chart_data = []
             
-            for sector_name in top_sectors:
+            # 优化：限制处理的板块数量以提升性能
+            process_sectors = top_sectors[:20]  # 只处理前20个板块，提升性能
+            self.logger.info(f"实际处理板块数量: {len(process_sectors)}")
+            
+            for sector_name in process_sectors:
                 # 模糊匹配板块
                 sector_affinity_df = affinity_df[
                     affinity_df['板块'].str.contains(sector_name, na=False, case=False) |
@@ -517,7 +796,8 @@ class MultiPlateStockServer(BaseStockServer):
                     "y": stock_minute_df_temp['speed_change_1min_cumsum'].tolist()
                 })
             
-            return jsonify({
+            # 构建响应数据
+            response_data = jsonify({
                 "chartType": "line",
                 "data": chart_data,
                 "layout": {
@@ -527,6 +807,17 @@ class MultiPlateStockServer(BaseStockServer):
                     "legend": {"title": "板块名称"}
                 }
             })
+            
+            # 存储到缓存
+            self.response_cache.store_response(
+                cache_endpoint, 
+                None, 
+                source_data, 
+                response_data
+            )
+            
+            self.logger.info(f"板块涨速数据计算完成，生成 {len(chart_data)} 个板块的图表数据")
+            return response_data
         
         except Exception as e:
             self.logger.error(f"获取板块涨速数据失败: {e}")
@@ -537,6 +828,11 @@ class MultiPlateStockServer(BaseStockServer):
         try:
             start_time = time.time()
             sector_name = request.args.get('sectors', '航运概念')
+            
+            # 构建缓存参数
+            cache_params = {
+                'sector_name': sector_name
+            }
             
             plate_df = self.data_cache.load_data('plate_df')
             if plate_df.empty:
@@ -551,6 +847,26 @@ class MultiPlateStockServer(BaseStockServer):
             latest_time = plate_df['时间'].max()
             plate_df = plate_df[plate_df['时间'] == latest_time]
             
+            # 构建用于哈希比较的源数据
+            source_data = {
+                'sector_name': sector_name,
+                'data_time': str(latest_time),
+                'data_count': len(plate_df),
+                # 添加影响结果的关键字段的哈希
+                'plate_summary': plate_df[['板块名', '板块涨幅', '板块5分涨速']].to_dict('records')[:10]  # 只取前10个作为摘要
+            }
+            
+            # 检查是否可以使用缓存
+            cache_endpoint = '/api/table-data/plate_info'
+            should_cache, cached_response = self.response_cache.should_use_cache(
+                cache_endpoint, cache_params, source_data
+            )
+            
+            if should_cache and cached_response:
+                self.logger.info(f"使用缓存数据返回板块概要表格: {sector_name}")
+                return cached_response
+            
+            # 需要重新计算，继续执行原有逻辑
             # 计算大盘涨速分布
             speed_bins = [-10, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 10]
             speed_counts = []
@@ -611,10 +927,21 @@ class MultiPlateStockServer(BaseStockServer):
                 
                 rows.append(row)
             
-            return jsonify({
+            # 构建响应数据
+            response_data = jsonify({
                 "columns": valid_columns,
                 "rows": rows
             })
+            
+            # 存储到缓存
+            self.response_cache.store_response(
+                cache_endpoint, 
+                cache_params, 
+                source_data, 
+                response_data
+            )
+            
+            return response_data
         
         except Exception as e:
             self.logger.error(f"获取板块信息失败: {e}")
@@ -626,11 +953,18 @@ class MultiPlateStockServer(BaseStockServer):
             sector_name = request.args.get('sector_name') or request.args.get('sectors', '航运概念')
             component_id = request.args.get('componentId', 'table2')
             
+            # 构建缓存参数
+            cache_params = {
+                'sector_name': sector_name,
+                'component_id': component_id
+            }
+            
             self.logger.info(f"API调用: componentId={component_id}, 传入的sector_name={sector_name}")
             
             # 对于table12，优先使用动态标题
             if component_id == 'table12':
                 sector_name = self.dynamic_titles.get('table12', sector_name)
+                cache_params['sector_name'] = sector_name  # 更新缓存参数
                 self.logger.info(f"table12 使用动态标题中的板块: {sector_name}")
             
             # 根据组件ID获取对应板块
@@ -642,13 +976,14 @@ class MultiPlateStockServer(BaseStockServer):
                     }
                     if component_id in sector_map and len(top_sectors) > sector_map[component_id]:
                         sector_name = top_sectors[sector_map[component_id]]
+                        cache_params['sector_name'] = sector_name  # 更新缓存参数
                         self.logger.info(f"组件 {component_id} 使用动态板块: {sector_name}")
                 except Exception as e:
                     self.logger.warning(f"获取动态板块失败，使用默认板块: {e}")
             
             self.logger.info(f"最终使用的板块名称: {sector_name}")
             
-            # 读取股票数据
+            # 读取股票数据作为数据源进行哈希比较
             stock_df = self.data_cache.load_data('stock_df')
             if stock_df.empty:
                 return jsonify({
@@ -662,12 +997,15 @@ class MultiPlateStockServer(BaseStockServer):
             latest_time = stock_df['time'].max()
             stock_df = stock_df[stock_df['time'] == latest_time]
             
-            stock_df['Sector'] = stock_df['Sector'].astype(str)
-            stock_df['id'] = stock_df['id'].astype(int)
-            stock_df['change'] = stock_df['change'].astype(float)
-            
             # 读取板块关联数据
-            affinity_df = pd.read_csv('strategy\\strategy001\\data\\板块内股票同涨率_长周期.csv')
+            affinity_df = self.data_cache.load_data('affinity_df')
+            
+            if affinity_df.empty:
+                return jsonify({
+                    "columns": [],
+                    "rows": [],
+                    "message": "板块关联数据文件读取失败"
+                })
             
             # 模糊匹配板块
             sector_affinity_df = affinity_df[
@@ -682,6 +1020,26 @@ class MultiPlateStockServer(BaseStockServer):
                     "message": f"未找到包含 '{sector_name}' 的板块股票数据"
                 })
             
+            # 构建用于哈希比较的源数据（包含影响结果的关键数据）
+            source_data = {
+                'sector_name': sector_name,
+                'stock_data_time': str(latest_time),
+                'stock_count': len(stock_df),
+                'sector_stock_ids': sorted(sector_affinity_df['股票id'].tolist()),
+                'dynamic_titles': self.dynamic_titles.copy()
+            }
+            
+            # 检查是否可以使用缓存
+            cache_endpoint = '/api/table-data/stocks'
+            should_cache, cached_response = self.response_cache.should_use_cache(
+                cache_endpoint, cache_params, source_data
+            )
+            
+            if should_cache and cached_response:
+                self.logger.info(f"使用缓存数据返回股票表格: {sector_name}")
+                return cached_response
+            
+            # 需要重新计算，继续执行原有逻辑
             matched_sectors = sector_affinity_df['板块'].unique()
             self.logger.info(f"匹配到的板块: {matched_sectors}")
             
@@ -758,12 +1116,23 @@ class MultiPlateStockServer(BaseStockServer):
                 
                 rows.append(row)
             
-            return jsonify({
+            # 构建响应数据
+            response_data = jsonify({
                 "columns": valid_columns,
                 "rows": rows,
                 "sector_name": sector_name,
                 "total_stocks": len(rows)
             })
+            
+            # 存储到缓存
+            self.response_cache.store_response(
+                cache_endpoint, 
+                cache_params, 
+                source_data, 
+                response_data
+            )
+            
+            return response_data
         
         except Exception as e:
             self.logger.error(f"获取股票表格数据失败: {e}")
@@ -772,8 +1141,33 @@ class MultiPlateStockServer(BaseStockServer):
     def get_up_limit_table_data(self):
         """返回涨停数据表"""
         try:
-            up_limit_df = pd.read_csv(r'strategy\showhtml\server\up_limit_df.csv')
+            up_limit_df = self.data_cache.load_data('up_limit_df')
             
+            if up_limit_df.empty:
+                return jsonify({
+                    "columns": [],
+                    "rows": [],
+                    "message": "涨停数据文件读取失败"
+                })
+            
+            # 构建用于哈希比较的源数据
+            source_data = {
+                'data_count': len(up_limit_df),
+                'file_timestamp': self.data_cache.timestamps.get('up_limit_df', 0),
+                'data_sample': up_limit_df.head(5).to_dict('records') if not up_limit_df.empty else []
+            }
+            
+            # 检查是否可以使用缓存
+            cache_endpoint = '/api/table-data/up_limit'
+            should_cache, cached_response = self.response_cache.should_use_cache(
+                cache_endpoint, None, source_data
+            )
+            
+            if should_cache and cached_response:
+                self.logger.info("使用缓存数据返回涨停数据表")
+                return cached_response
+            
+            # 需要重新计算，继续执行原有逻辑
             columns = [
                 {"field": "时间", "header": "时间"},
                 {"field": "股票ID", "header": "股票ID", "visible": False},
@@ -803,10 +1197,21 @@ class MultiPlateStockServer(BaseStockServer):
                 
                 rows.append(row)
             
-            return jsonify({
+            # 构建响应数据
+            response_data = jsonify({
                 "columns": valid_columns,
                 "rows": rows
             })
+            
+            # 存储到缓存
+            self.response_cache.store_response(
+                cache_endpoint, 
+                None, 
+                source_data, 
+                response_data
+            )
+            
+            return response_data
         
         except Exception as e:
             self.logger.error(f"获取涨停数据失败: {e}")
@@ -1032,7 +1437,10 @@ class MultiPlateStockServer(BaseStockServer):
                     "server_status": "online"
                 }
                 yield f"data: {json.dumps(connection_info)}\n\n"
-                yield f"data: {json.dumps(self.latest_update)}\n\n"
+                
+                # 不再自动发送latest_update，避免无差别刷新
+                # 只在有实际更新时才发送
+                # yield f"data: {json.dumps(self.latest_update)}\n\n"
                 
                 while True:
                     try:
@@ -1127,7 +1535,11 @@ class MultiPlateStockServer(BaseStockServer):
     def _get_top_sectors(self, n=5):
         """获取涨幅前n的板块名称"""
         try:
-            plate_df = pd.read_csv('strategy\\showhtml\\server\\good_plate_df.csv')
+            plate_df = self.data_cache.load_data('plate_df')
+            if plate_df.empty:
+                self.logger.warning("板块数据文件读取失败，使用默认板块")
+                return ["航运概念", "可控核聚变", "军工"]
+                
             plate_df['时间'] = pd.to_datetime(plate_df['时间'])
             latest_time = plate_df['时间'].max()
             plate_df = plate_df[plate_df['时间'] == latest_time]
@@ -1218,6 +1630,7 @@ class DataCache:
             'affinity_df': 'strategy\\strategy001\\data\\板块内股票同涨率_长周期.csv',
             'plate_df': 'strategy\\showhtml\\server\\good_plate_df.csv',
             'stock_minute_df': 'strategy\\showhtml\\server\\stock_minute_df.csv',
+            'up_limit_df': 'strategy\\showhtml\\server\\up_limit_df.csv'
         }
         return paths.get(file_key)
         
@@ -1270,7 +1683,18 @@ def main():
     """主函数"""
     print("🚀 启动多板块股票仪表盘服务器...")
     
-    server = MultiPlateStockServer(port=5008)
+    # 简单配置：禁用自动更新
+    auto_update_config = {'enabled': False}
+    
+    # 创建服务器实例
+    server = MultiPlateStockServer(
+        port=5007,  # 固定端口
+        auto_update_config=auto_update_config
+    )
+    
+    # 显示服务器基本信息
+    print(f"📋 端口: {server.port}")
+    print(f"🚫 自动更新: 已禁用")
     
     try:
         # 启动时初始化动态标题
@@ -1279,7 +1703,7 @@ def main():
     except Exception as e:
         print(f"⚠️ 动态标题初始化失败: {e}")
     
-    server.run(debug=True, use_reloader=False)
+    server.run(debug=True)
 
 
 if __name__ == '__main__':

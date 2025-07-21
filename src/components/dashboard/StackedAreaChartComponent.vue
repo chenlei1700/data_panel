@@ -54,6 +54,11 @@ export default defineComponent({
     const xAxisValues = ref([]);
     const resizeObserver = ref(null);
 
+    // 防重复刷新逻辑
+    let isRefreshing = false;
+    let refreshTimer = null;
+    const lastUpdateTime = ref(0);
+
     // 默认颜色配置
     const defaultColors = [
       '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', 
@@ -66,7 +71,24 @@ export default defineComponent({
       
       try {
         console.log('开始加载堆叠面积图数据');
-        const response = await axios.get(props.componentConfig.dataSource);
+        
+        // 构建URL，添加组件ID和时间戳
+        let url = props.componentConfig.dataSource;
+        if (url.includes('?')) {
+          url += '&';
+        } else {
+          url += '?';
+        }
+        
+        // 添加组件ID参数（如果存在）
+        if (props.componentConfig.id) {
+          url += `component_id=${props.componentConfig.id}&`;
+        }
+        
+        // 添加时间戳防止缓存
+        url += `_t=${Date.now()}`;
+        
+        const response = await axios.get(url);
         const data = response.data;
         
         console.log('收到的堆叠面积图数据:', data);
@@ -269,26 +291,118 @@ export default defineComponent({
       return 'transparent';
     };
 
+    // 获取组件刷新延迟
+    const getComponentDelay = () => {
+      return props.componentConfig.id ? Math.min(100 * parseInt(props.componentConfig.id.toString().replace(/\D/g, '')), 2000) : 0;
+    };
+
+    // 统一的刷新处理方法
+    const handleRefresh = (source, details = null, defaultDelay = 500) => {
+      console.log(`🔔 [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 收到刷新请求，来源: ${source}`, details);
+      
+      // 清除之前的定时器
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
+      
+      // 计算延迟时间
+      const delay = getComponentDelay() || defaultDelay;
+      
+      // 检查是否在短时间内重复刷新
+      const now = Date.now();
+      if (now - lastUpdateTime.value < 500) {
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 距离上次更新时间过短(${now - lastUpdateTime.value}ms)，跳过刷新`);
+        return;
+      }
+      
+      // 如果正在刷新中，跳过此次请求
+      if (isRefreshing) {
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 正在刷新中，跳过重复请求`);
+        return;
+      }
+      
+      // 设置刷新定时器
+      refreshTimer = setTimeout(() => {
+        if (isRefreshing) return; // 双重检查
+        
+        isRefreshing = true;
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 开始刷新数据...`);
+        
+        refreshData().finally(() => {
+          // 刷新完成后重置状态，允许下次刷新
+          setTimeout(() => {
+            isRefreshing = false;
+          }, 1000); // 1秒内禁止重复刷新
+        });
+        
+        refreshTimer = null;
+      }, delay);
+    };
+
     // 刷新数据方法（供外部调用）
-    const refreshData = () => {
-      loadChartData();
+    const refreshData = async () => {
+      console.log(`🔄 [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 开始刷新数据...`);
+      
+      try {
+        await loadChartData();
+        console.log(`✅ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 数据刷新完成`);
+      } catch (err) {
+        console.error(`❌ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 数据刷新失败:`, err);
+        throw err;
+      } finally {
+        lastUpdateTime.value = Date.now();
+      }
     };
 
     // 监听仪表盘更新事件
     const handleDashboardUpdate = (event) => {
       const update = event.detail;
-      if (update && update.componentId === props.componentConfig.id) {
-        console.log('StackedAreaChart 接收到仪表盘更新:', update);
-        refreshData();
+      
+      // 过滤掉系统消息，避免不必要的刷新
+      if (update && (update.type === 'connection_established' || update.type === 'heartbeat')) {
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 忽略系统消息:`, update.type);
+        return;
+      }
+      
+      // 检查是否需要刷新当前组件
+      if (update && (
+        update.componentId === props.componentConfig.id || 
+        update.action === 'reload_config' ||
+        update.action === 'force_refresh'
+      )) {
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 将处理更新:`, update);
+        handleRefresh('仪表盘更新', update, 200);
+      } else {
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 跳过不相关更新:`, update);
+      }
+    };
+    
+    // 添加配置更新事件监听  
+    const handleConfigUpdate = (event) => {
+      const update = event.detail;
+      
+      // 只有在不是reload_config触发的配置更新时才刷新
+      if (update && update.action !== 'reload_config') {
+        handleRefresh('配置更新', update, 300);
+      } else {
+        console.log(`⏱️ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 跳过reload_config触发的配置更新事件`);
       }
     };
 
     onMounted(() => {
       console.log('StackedAreaChartComponent 挂载完成');
-      loadChartData();
       
-      // 监听仪表盘更新事件
+      // 延迟初始化，避免重复请求
+      const delay = getComponentDelay();
+      setTimeout(() => {
+        console.log(`⏰ [${new Date().toISOString()}] 堆叠面积图组件 ${props.componentConfig.id} 延迟 ${delay}ms 后开始初始化...`);
+        loadChartData();
+      }, delay);
+      
+      // 监听仪表盘事件
       window.addEventListener('dashboard-update', handleDashboardUpdate);
+      window.addEventListener('dashboard-config-updated', handleConfigUpdate);
       
       // 添加窗口大小变化的响应式处理
       nextTick(() => {
@@ -305,7 +419,17 @@ export default defineComponent({
     });
 
     onUnmounted(() => {
+      // 清理定时器
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
+      
+      // 清理事件监听器
       window.removeEventListener('dashboard-update', handleDashboardUpdate);
+      window.removeEventListener('dashboard-config-updated', handleConfigUpdate);
+      
+      // 清理ResizeObserver
       if (resizeObserver.value) {
         resizeObserver.value.disconnect();
       }
@@ -328,7 +452,10 @@ export default defineComponent({
       error,
       tableData,
       xAxisValues,
-      getCellColor
+      getCellColor,
+      refreshData,
+      handleRefresh,
+      getComponentDelay
     };
   }
 });

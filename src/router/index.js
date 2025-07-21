@@ -3,7 +3,6 @@
 
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
-import StackedAreaDemo from '../views/StackedAreaDemo.vue'
 import StockDashboard from '../views/StockDashboard.vue'
 
 const routes = [
@@ -22,11 +21,11 @@ const routes = [
     }
   },
   {
-    path: '/stacked-area-demo',
+    path: '/multiplate',
     name: 'stacked_area_demo',
-    component: StackedAreaDemo,
+    component: StockDashboard,
     meta: {
-      title: '堆叠面积图组件演示',
+      title: '多板块组件演示',
       apiService: 'stacked_area_demo'  // 对应API配置中的键名，使用端口5007
     }
   },

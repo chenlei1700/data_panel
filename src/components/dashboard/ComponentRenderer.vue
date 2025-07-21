@@ -7,6 +7,7 @@
         <component 
           :is="componentType" 
           :component-config="componentConfig"
+          ref="contentComponent"
         />
       </div>
     </div>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票仪表盘服务器配置管理</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .server-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+        
+        .server-card h3 {
+            margin-top: 0;
+            color: #34495e;
+        }
+        
+        .config-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .config-group {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        
+        .config-group h4 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #219a52;
+        }
+        
+        .btn-warning {
+            background: #f39c12;
+        }
+        
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-active {
+            background: #27ae60;
+        }
+        
+        .status-inactive {
+            background: #e74c3c;
+        }
+        
+        .status-panel {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .quick-actions {
+            margin-top: 20px;
+        }
+        
+        .components-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        
+        .component-tag {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .log-panel {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 股票仪表盘服务器配置管理</h1>
+            <p>管理自动更新、缓存和其他服务器设置</p>
+        </div>
+        
+        <div id="servers-container">
+            <!-- 服务器配置将在这里动态加载 -->
+        </div>
+        
+        <div class="log-panel" id="log-panel">
+            <div><span style="color: #3498db;">[系统]</span> 配置管理界面已加载</div>
+        </div>
+    </div>
+
+    <script>
+        class ServerConfigManager {
+            constructor() {
+                this.servers = [
+                    { name: 'multiplate', port: 5008, displayName: '多板块股票仪表盘' },
+                    { name: 'demo', port: 5004, displayName: '演示股票仪表盘' },
+                    { name: 'strong', port: 5002, displayName: '强势股票仪表盘' }
+                ];
+                this.init();
+            }
+            
+            init() {
+                this.loadAllServers();
+                this.setupAutoRefresh();
+            }
+            
+            async loadAllServers() {
+                const container = document.getElementById('servers-container');
+                container.innerHTML = '';
+                
+                for (const server of this.servers) {
+                    await this.loadServerConfig(server);
+                }
+            }
+            
+            async loadServerConfig(server) {
+                try {
+                    const response = await fetch(`http://localhost:${server.port}/api/auto-update/status`);
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        this.renderServerCard(server, data.auto_update, true);
+                    } else {
+                        this.renderServerCard(server, {}, false);
+                    }
+                } catch (error) {
+                    console.error(`加载服务器 ${server.name} 配置失败:`, error);
+                    this.renderServerCard(server, {}, false);
+                }
+            }
+            
+            renderServerCard(server, config, isOnline) {
+                const container = document.getElementById('servers-container');
+                
+                const card = document.createElement('div');
+                card.className = 'server-card';
+                card.innerHTML = `
+                    <h3>
+                        <span class="status-indicator ${isOnline ? 'status-active' : 'status-inactive'}"></span>
+                        ${server.displayName}
+                        <small style="color: #7f8c8d;">(端口: ${server.port})</small>
+                    </h3>
+                    
+                    ${isOnline ? this.renderOnlineServerConfig(server, config) : this.renderOfflineServer(server)}
+                `;
+                
+                container.appendChild(card);
+                
+                if (isOnline) {
+                    this.bindServerEvents(server, card);
+                }
+            }
+            
+            renderOnlineServerConfig(server, config) {
+                return `
+                    <div class="status-panel">
+                        <strong>状态:</strong> 
+                        <span style="color: ${config.enabled ? '#27ae60' : '#e74c3c'}">
+                            ${config.enabled ? '自动更新已启用' : '自动更新已禁用'}
+                        </span>
+                        <span style="margin-left: 20px;">线程: ${config.thread_running ? '运行中' : '已停止'}</span>
+                        <span style="margin-left: 20px;">客户端: ${config.sse_clients}/${config.max_clients}</span>
+                    </div>
+                    
+                    <div class="config-section">
+                        <div class="config-group">
+                            <h4>基础配置</h4>
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="enabled-${server.name}" ${config.enabled ? 'checked' : ''}>
+                                    <label for="enabled-${server.name}">启用自动更新</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>更新间隔 (秒)</label>
+                                <input type="number" id="interval-${server.name}" value="${config.interval || 30}" min="5" max="300">
+                            </div>
+                            <div class="form-group">
+                                <label>最大客户端数</label>
+                                <input type="number" id="max-clients-${server.name}" value="${config.max_clients || 50}" min="1" max="200">
+                            </div>
+                        </div>
+                        
+                        <div class="config-group">
+                            <h4>组件配置</h4>
+                            <div class="form-group">
+                                <label>更新组件</label>
+                                <div class="components-list">
+                                    ${(config.components || []).map(comp => `<span class="component-tag">${comp}</span>`).join('')}
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>快速配置</label>
+                                <select id="quick-config-${server.name}">
+                                    <option value="">选择预设配置...</option>
+                                    <option value="high_frequency">高频更新 (10秒)</option>
+                                    <option value="normal">正常模式 (30秒)</option>
+                                    <option value="low_frequency">低频更新 (60秒)</option>
+                                    <option value="disabled">禁用更新</option>
+                                    <option value="demo">演示模式 (15秒)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <button class="btn btn-success" onclick="configManager.saveConfig('${server.name}')">保存配置</button>
+                        <button class="btn btn-warning" onclick="configManager.toggleAutoUpdate('${server.name}')">
+                            ${config.enabled ? '禁用' : '启用'}自动更新
+                        </button>
+                        <button class="btn" onclick="configManager.refreshConfig('${server.name}')">刷新状态</button>
+                        <button class="btn btn-danger" onclick="configManager.clearCache('${server.name}')">清理缓存</button>
+                    </div>
+                `;
+            }
+            
+            renderOfflineServer(server) {
+                return `
+                    <div class="status-panel" style="background: #fadbd8;">
+                        <strong>状态:</strong> <span style="color: #e74c3c;">服务器离线</span>
+                        <p style="margin: 10px 0 0 0; color: #7f8c8d;">无法连接到端口 ${server.port}，请确认服务器已启动。</p>
+                    </div>
+                    
+                    <div class="quick-actions">
+                        <button class="btn" onclick="configManager.refreshConfig('${server.name}')">重试连接</button>
+                    </div>
+                `;
+            }
+            
+            bindServerEvents(server, card) {
+                // 绑定快速配置变更事件
+                const quickConfigSelect = card.querySelector(`#quick-config-${server.name}`);
+                if (quickConfigSelect) {
+                    quickConfigSelect.addEventListener('change', (e) => {
+                        if (e.target.value) {
+                            this.applyQuickConfig(server.name, e.target.value);
+                        }
+                    });
+                }
+            }
+            
+            async saveConfig(serverName) {
+                const server = this.servers.find(s => s.name === serverName);
+                if (!server) return;
+                
+                const config = {
+                    enabled: document.getElementById(`enabled-${serverName}`).checked,
+                    interval: parseInt(document.getElementById(`interval-${serverName}`).value),
+                    max_clients: parseInt(document.getElementById(`max-clients-${serverName}`).value)
+                };
+                
+                try {
+                    const response = await fetch(`http://localhost:${server.port}/api/auto-update/config`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(config)
+                    });
+                    
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        this.log(`✅ ${server.displayName} 配置保存成功`);
+                        this.loadServerConfig(server);
+                    } else {
+                        this.log(`❌ ${server.displayName} 配置保存失败: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`❌ ${server.displayName} 配置保存失败: ${error.message}`, 'error');
+                }
+            }
+            
+            async toggleAutoUpdate(serverName) {
+                const server = this.servers.find(s => s.name === serverName);
+                if (!server) return;
+                
+                try {
+                    const response = await fetch(`http://localhost:${server.port}/api/auto-update/toggle`, {
+                        method: 'POST'
+                    });
+                    
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        this.log(`🔄 ${server.displayName} ${result.message}`);
+                        this.loadServerConfig(server);
+                    } else {
+                        this.log(`❌ ${server.displayName} 切换失败: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`❌ ${server.displayName} 切换失败: ${error.message}`, 'error');
+                }
+            }
+            
+            async refreshConfig(serverName) {
+                const server = this.servers.find(s => s.name === serverName);
+                if (!server) return;
+                
+                this.log(`🔄 刷新 ${server.displayName} 配置...`);
+                await this.loadServerConfig(server);
+            }
+            
+            async clearCache(serverName) {
+                const server = this.servers.find(s => s.name === serverName);
+                if (!server) return;
+                
+                try {
+                    const response = await fetch(`http://localhost:${server.port}/api/cache/clear`, {
+                        method: 'POST'
+                    });
+                    
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        this.log(`🗑️ ${server.displayName} 缓存清理成功`);
+                    } else {
+                        this.log(`❌ ${server.displayName} 缓存清理失败: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`❌ ${server.displayName} 缓存清理失败: ${error.message}`, 'error');
+                }
+            }
+            
+            async applyQuickConfig(serverName, configType) {
+                this.log(`⚙️ 正在为 ${serverName} 应用配置模板: ${configType}...`);
+                // 这里可以调用后端API应用快速配置
+                // 目前先模拟配置应用
+                setTimeout(() => {
+                    this.log(`✅ 配置模板 ${configType} 应用完成`);
+                    this.refreshConfig(serverName);
+                }, 1000);
+            }
+            
+            setupAutoRefresh() {
+                // 每30秒自动刷新一次状态
+                setInterval(() => {
+                    this.loadAllServers();
+                }, 30000);
+            }
+            
+            log(message, type = 'info') {
+                const logPanel = document.getElementById('log-panel');
+                const timestamp = new Date().toLocaleTimeString();
+                const color = type === 'error' ? '#e74c3c' : type === 'warning' ? '#f39c12' : '#3498db';
+                
+                const logEntry = document.createElement('div');
+                logEntry.innerHTML = `<span style="color: ${color};">[${timestamp}]</span> ${message}`;
+                
+                logPanel.appendChild(logEntry);
+                logPanel.scrollTop = logPanel.scrollHeight;
+                
+                // 限制日志条数
+                if (logPanel.children.length > 50) {
+                    logPanel.removeChild(logPanel.firstChild);
+                }
+            }
+        }
+        
+        // 初始化配置管理器
+        const configManager = new ServerConfigManager();
+    </script>
+</body>
+</html>

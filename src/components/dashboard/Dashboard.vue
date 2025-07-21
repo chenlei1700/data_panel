@@ -297,39 +297,50 @@ export default defineComponent({
         const sectorName = update.sector_name || update.params.sectors;
         console.log(`⏱️ [${new Date().toISOString()}] 处理板块更新请求: ${sectorName}`);
         
-        // 更新所有组件的数据源参数
-        layout.value.components.forEach(component => {
-          if (component.type === 'chart' || component.type === 'table') {
-            const baseUrl = component.dataSource.split('?')[0];
-            const params = new URLSearchParams();
-            
-            // 获取当前URL的参数
-            const currentUrlParts = component.dataSource.split('?');
-            if (currentUrlParts.length > 1) {
-              const currentParams = new URLSearchParams(currentUrlParts[1]);
-              // 保留现有参数
-              currentParams.forEach((value, key) => {
-                params.set(key, value);
-              });
+        // 创建新的layout对象，而不是直接修改现有的
+        const newLayout = {
+          ...layout.value,
+          components: layout.value.components.map(component => {
+            if (component.type === 'chart' || component.type === 'table') {
+              const baseUrl = component.dataSource.split('?')[0];
+              const params = new URLSearchParams();
+              
+              // 获取当前URL的参数
+              const currentUrlParts = component.dataSource.split('?');
+              if (currentUrlParts.length > 1) {
+                const currentParams = new URLSearchParams(currentUrlParts[1]);
+                // 保留现有参数
+                currentParams.forEach((value, key) => {
+                  params.set(key, value);
+                });
+              }
+              
+              // 添加组件ID参数
+              params.set('componentId', component.id);
+              
+              // 更新板块参数
+              if (sectorName) {
+                params.set('sectors', sectorName);
+                params.set('sector_name', sectorName);
+              }
+              
+              // 添加时间戳防止缓存
+              params.set('_t', Date.now().toString());
+              
+              const newDataSource = `${baseUrl}?${params.toString()}`;
+              console.log(`⏱️ [${new Date().toISOString()}] 更新组件 ${component.id} 数据源:`, newDataSource);
+              
+              return {
+                ...component,
+                dataSource: newDataSource
+              };
             }
-            
-            // 添加组件ID参数
-            params.set('componentId', component.id);
-            
-            // 更新板块参数
-            if (sectorName) {
-              params.set('sectors', sectorName);
-              params.set('sector_name', sectorName);
-            }
-            
-            // 添加时间戳防止缓存
-            params.set('_t', Date.now().toString());
-            
-            const newDataSource = `${baseUrl}?${params.toString()}`;
-            console.log(`⏱️ [${new Date().toISOString()}] 更新组件 ${component.id} 数据源:`, newDataSource);
-            component.dataSource = newDataSource;
-          }
-        });
+            return component;
+          })
+        };
+        
+        // 使用nextTick确保DOM更新完成
+        layout.value = newLayout;
         
         // 通知组件刷新数据
         setTimeout(() => {

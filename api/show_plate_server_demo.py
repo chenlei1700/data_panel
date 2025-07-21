@@ -536,7 +536,7 @@ class StackedAreaDemoServer(BaseStockServer):
                             "type": "heartbeat",
                             "client_id": client_id,
                             "timestamp": time.time(),
-                            "server_time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "server_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                             "active_connections": len(self.sse_clients),
                             "stacked_status": "running"
                         }

@@ -28,10 +28,10 @@ echo ✅ 依赖包检查完成
 :: 启动后端服务
 echo [3/4] 启动后端API服务...
 
-start "演示仪表盘 (端口5004)" cmd /k "echo 启动演示仪表盘服务... && python api/show_plate_server_multiplate_v2.py"
+start "演示仪表盘 (端口5004)" cmd /k "echo 启动演示仪表盘服务... && python api/show_plate_server_demo.py"
 timeout /t 2 >nul
 
-start "堆叠面积图演示 (端口5007)" cmd /k "echo 启动堆叠面积图演示服务... && python api/stacked_area_demo_server.py"
+start "堆叠面积图演示 (端口5007)" cmd /k "echo 启动堆叠面积图演示服务... && python api/show_plate_server_multiplate_v2.py"
 timeout /t 2 >nul
 
 echo ✅ 后端服务启动完成

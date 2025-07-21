@@ -56,7 +56,7 @@
           </div>
         </router-link>
 
-        <router-link to="/stacked-area-demo" class="dashboard-card">
+        <router-link to="/multiplate" class="dashboard-card">
           <div class="card-icon">📊</div>
           <h3>堆叠面积图演示</h3>
           <p>三维数据可视化堆叠面积图组件演示</p>
