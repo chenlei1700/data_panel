@@ -18,22 +18,21 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "preserve",
-    "baseUrl": ".",
+    "baseUrl": "..",
     "paths": {
       "@/*": ["src/*"]
     }
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "tests/**/*.ts",
-    "tests/**/*.tsx"
+    "../src/**/*.ts",
+    "../src/**/*.tsx",
+    "../src/**/*.vue",
+    "../tests/**/*.ts",
+    "../tests/**/*.tsx"
   ],
   "exclude": [
-    "node_modules",
-    "dist",
-    "build"
+    "../node_modules",
+    "../dist"
   ],
   "vueCompilerOptions": {
     "target": 3,
