@@ -1,44 +1,43 @@
 # 📋 統一設定管理システム使用ガイド
 
-**作成者**: chenlei
+**作者**: chenlei
 
 ## 🌟 概要
 
-新しいページ追加の煩雑な手順を簡素化するため、統一設定管理システムを設計しました：
+新しいページを追加する煩雑な手順を簡素化するため、統一設定管理システムを設計しました：
 
 - **📄 project-config.json** - 統一設定ファイル、すべてのページとサービスの設定情報を含む
-- **🤖 auto-config-generator.py** - 自動生成器、設定ファイルに基づいて必要なコードファイルをすべて生成
-- **➕ quick-add-page.py** - ページ高速追加ツール、対話式で新ページを作成
+- **🤖 auto-config-generator.py** - 自動ジェネレーター、設定ファイルに基づいて必要なコードファイルをすべて生成
+- **⚡ quick-add-page.py** - ページ高速追加ツール、インタラクティブに新しいページを作成
 
 ## 🚀 クイックスタート
 
-### 1. プロジェクト設定初期化
+### 1. プロジェクト設定の初期化
 
 ```bash
 # 現在の設定を確認
 cat project-config.json
 
 # すべての設定ファイルを生成
-python scripts/auto-config-generator.py
+python auto-config-generator.py
 ```
 
-### 2. 新ページ追加（推奨方法）
+### 2. 新しいページを追加（推奨方法）
 
 ```bash
-# 対話式で新ページを追加
+# インタラクティブに新しいページを追加
 python quick-add-page.py
 
 # サンプルページを一括追加
 python quick-add-page.py batch
 ```
 
-### 3. 手動設定（上級者向け）
+### 3. 手動でページを追加
+
+`project-config.json` ファイルを編集した後、以下を実行：
 
 ```bash
-# project-config.json を直接編集
-# 新サービスを services 配列に追加
-# 自動生成器を実行
-python scripts/auto-config-generator.py
+python auto-config-generator.py
 ```
 
 ## 📋 設定ファイル構造
@@ -94,10 +93,10 @@ python scripts/auto-config-generator.py
 
 ```bash
 # すべての設定ファイルを生成
-python scripts/auto-config-generator.py
+python auto-config-generator.py
 
 # ヘルプ情報を表示
-python scripts/auto-config-generator.py --help
+python auto-config-generator.py --help
 ```
 
 **生成されるファイル:**
@@ -148,7 +147,7 @@ python quick-add-page.py
 - パス: `/stock-dashboard-ai`
 - サーバーファイル: `api/show_plate_server_stockdashboard_ai.py`
 
-### 例2：手動設定による複数ページ
+### 例2：複数ページを手動設定
 
 `project-config.json` を編集：
 
@@ -175,7 +174,7 @@ python quick-add-page.py
 
 その後実行：
 ```bash
-python scripts/auto-config-generator.py
+python auto-config-generator.py
 ```
 
 ## 🔄 ワークフロー
@@ -345,28 +344,3 @@ adder.batch_add(services)
 3. 🚀 サービスを起動してテスト
 
 開発効率が大幅に向上し、エラーの可能性が減少し、開発者が設定管理ではなくビジネスロジックに集中できるようになりました。
-
-## 🎯 システムの利点
-
-1. **統一管理** - すべての設定を一箇所で管理
-2. **自動化** - 手動ファイル編集の削減
-3. **エラー防止** - 自動生成によるミス削減
-4. **高速開発** - 新ページ追加時間の大幅短縮
-5. **保守性向上** - 明確な設定構造
-
-## 📚 詳細ドキュメント
-
-- [設定ガイド](CONFIG_GUIDE.md) - 詳細な設定項目説明
-- [ページマイグレーションガイド](NEW_PAGE_MIGRATION_GUIDE.md) - 既存サービスの移行方法
-- [データソース設定ガイド](DATA_SOURCE_CONFIGURATION_GUIDE.md) - APIとデータソース設定
-
-## 🔧 トラブルシューティング
-
-### よくある問題
-1. **設定が反映されない** → 自動生成器を再実行
-2. **ポート競合** → project-config.json でポート番号を変更
-3. **VS Code タスクが表示されない** → VS Code を再起動
-
----
-
-このシステムにより、新ページ追加が従来の複数ファイル編集から単一設定変更に簡素化されます。

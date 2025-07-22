@@ -196,7 +196,7 @@ GET /api/cache/status
 ### Python代码示例
 
 ```python
-from server_config import get_server_config, create_auto_update_config
+from config.server_config import get_server_config, create_auto_update_config
 from show_plate_server_multiplate_v2 import MultiPlateStockServer
 
 # 创建自定义配置
@@ -214,7 +214,7 @@ server.run()
 
 ```python
 # 获取配置管理器
-from server_config import config_manager
+from config.server_config import config_manager
 
 # 更新服务器配置
 config_manager.update_server_config("multiplate", {
@@ -278,7 +278,7 @@ python server_launcher.py start --server multiplate --debug
 
 检查配置文件：
 ```bash
-python -c "from server_config import config_manager; print(config_manager.config)"
+python -c "from config.server_config import config_manager; print(config_manager.config)"
 ```
 
 ## 更新历史

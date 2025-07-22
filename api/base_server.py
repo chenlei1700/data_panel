@@ -30,13 +30,62 @@ from typing import Dict, List, Any, Optional, Tuple
 class BaseDataCache:
     """基础数据缓存类 - 用于数据文件的缓存管理"""
     
-    def __init__(self):
+    def __init__(self, file_paths: Optional[Dict[str, str]] = None):
         self.cache = {}
         self.timestamps = {}
+        self.file_paths = file_paths or {}
+        
+    def get_file_path(self, file_key: str) -> Optional[str]:
+        """获取文件路径"""
+        return self.file_paths.get(file_key)
+        
+    def get_file_timestamp(self, file_path: str) -> float:
+        """获取文件的修改时间戳"""
+        try:
+            return os.path.getmtime(file_path)
+        except OSError:
+            return 0
+            
+    def should_reload(self, file_key: str) -> bool:
+        """检查是否需要重新加载文件"""
+        file_path = self.get_file_path(file_key)
+        if not file_path or not os.path.exists(file_path):
+            return False
+            
+        current_timestamp = self.get_file_timestamp(file_path)
+        cached_timestamp = self.timestamps.get(file_key, 0)
+        
+        return current_timestamp > cached_timestamp
         
     def load_data(self, key: str):
-        """加载数据（子类可重写具体的加载逻辑）"""
+        """加载数据，支持从文件路径自动加载"""
+        # 如果有配置的文件路径，使用文件加载逻辑
+        if key in self.file_paths:
+            return self._load_from_file(key)
+        
+        # 否则返回缓存中的数据
         return self.cache.get(key, pd.DataFrame())
+    
+    def _load_from_file(self, file_key: str):
+        """从文件加载数据"""
+        if file_key not in self.cache or self.should_reload(file_key):
+            file_path = self.get_file_path(file_key)
+            if not file_path or not os.path.exists(file_path):
+                print(f"警告: 文件不存在 {file_path}")
+                return pd.DataFrame()
+                
+            try:
+                print(f"重新加载文件: {file_path}")
+                df = pd.read_csv(file_path)
+                self.cache[file_key] = df
+                self.timestamps[file_key] = self.get_file_timestamp(file_path)
+                return df.copy()
+            except Exception as e:
+                print(f"加载文件失败 {file_path}: {e}")
+                return pd.DataFrame()
+        else:
+            print(f"使用缓存数据: {file_key}")
+            return self.cache[file_key].copy()
     
     def update_data(self, key: str, data: Any):
         """更新缓存数据"""
@@ -47,6 +96,14 @@ class BaseDataCache:
         """清空缓存"""
         self.cache.clear()
         self.timestamps.clear()
+    
+    def add_file_path(self, key: str, path: str):
+        """添加文件路径映射"""
+        self.file_paths[key] = path
+    
+    def update_file_paths(self, paths: Dict[str, str]):
+        """批量更新文件路径映射"""
+        self.file_paths.update(paths)
 
 
 class BaseResponseCache:
@@ -179,7 +236,7 @@ class BaseStockServer(ABC):
         }
         
         # 初始化缓存系统
-        self.data_cache = BaseDataCache()
+        self.data_cache = BaseDataCache(self.get_data_cache_file_paths())
         self.response_cache = BaseResponseCache()
         
         # SSE相关
@@ -196,6 +253,10 @@ class BaseStockServer(ABC):
             self.logger.info(f"自动更新线程已启动，间隔: {self.auto_update_config['interval']}秒")
         else:
             self.logger.info("自动更新功能已禁用")
+    
+    def get_data_cache_file_paths(self) -> Dict[str, str]:
+        """获取数据缓存文件路径配置 - 子类可以重写此方法"""
+        return {}
     
     def _register_routes(self):
         """注册所有路由"""

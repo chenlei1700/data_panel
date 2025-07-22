@@ -98,15 +98,25 @@ export default defineComponent({
           const stackedData = data.stackedAreaData;
           chartData.value = stackedData;
           
-          // 从数据中提取 X 轴值（时间点）
-          xAxisValues.value = Object.keys(stackedData.data).sort();
-          
-          // 从第一个数据点提取 key 顺序
-          if (xAxisValues.value.length > 0) {
-            const firstDataPoint = stackedData.data[xAxisValues.value[0]];
-            chartData.value.keyOrder = Object.keys(firstDataPoint);
+          // 从后端获取的 xAxisValues (板块顺序)
+          if (data.xAxisValues && Array.isArray(data.xAxisValues)) {
+            xAxisValues.value = data.xAxisValues;
           } else {
-            chartData.value.keyOrder = [];
+            // 备用方案：从数据中提取 X 轴值并排序
+            xAxisValues.value = Object.keys(stackedData.data).sort();
+          }
+          
+          // 优先使用后端提供的 keyOrder（连板数类型顺序），确保从1连板到N连板的正确顺序
+          if (stackedData.keyOrder && Array.isArray(stackedData.keyOrder)) {
+            chartData.value.keyOrder = stackedData.keyOrder;
+          } else {
+            // 备用方案：从第一个数据点提取 key 顺序
+            if (xAxisValues.value.length > 0) {
+              const firstDataPoint = stackedData.data[xAxisValues.value[0]];
+              chartData.value.keyOrder = Object.keys(firstDataPoint);
+            } else {
+              chartData.value.keyOrder = [];
+            }
           }
           
           // 处理表格数据（从顶级响应数据中获取）
@@ -237,6 +247,36 @@ export default defineComponent({
         const yValues = points.map(p => p.y);
         const originalValues = points.map(p => p.originalValue);
         
+        // 构建悬浮提示模板
+        let hoverTemplate = `<b>${key}</b><br>X: %{x}<br>当前值: %{customdata}<br>累积值: %{y}<br>`;
+        
+        // 如果有股票名称数据，添加到悬浮提示中
+        const stockNames = [];
+        xValues.forEach(xValue => {
+          const hoverData = chartData.value.hoverData;
+          if (hoverData && hoverData[xValue] && hoverData[xValue][key]) {
+            const stocks = hoverData[xValue][key];
+            if (stocks && stocks.length > 0) {
+              // 限制显示的股票数量，避免悬浮框过大
+              const displayStocks = stocks.slice(0, 10); // 最多显示10只股票
+              const stockText = displayStocks.join(', ');
+              const moreText = stocks.length > 10 ? `... (还有${stocks.length - 10}只)` : '';
+              stockNames.push(`股票: ${stockText}${moreText}`);
+            } else {
+              stockNames.push('股票: 无');
+            }
+          } else {
+            stockNames.push('股票: 无数据');
+          }
+        });
+        
+        // 如果有股票数据，添加到悬浮模板中
+        if (stockNames.length > 0) {
+          hoverTemplate += `%{text}<br>`;
+        }
+        
+        hoverTemplate += '<extra></extra>';
+        
         // 创建填充区域的trace
         const areaTrace = {
           x: xValues,
@@ -250,13 +290,9 @@ export default defineComponent({
             color: colors[index % colors.length],
             width: 2
           },
-          hovertemplate: 
-            `<b>${key}</b><br>` +
-            `X: %{x}<br>` +
-            `当前值: %{customdata}<br>` +
-            `累积值: %{y}<br>` +
-            '<extra></extra>',
-          customdata: originalValues
+          hovertemplate: hoverTemplate,
+          customdata: originalValues,
+          text: stockNames.length > 0 ? stockNames : undefined
         };
         
         traces.push(areaTrace);

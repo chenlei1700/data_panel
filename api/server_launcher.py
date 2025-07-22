@@ -16,7 +16,7 @@ from typing import Dict, List
 # 添加当前目录到Python路径
 sys.path.append(os.path.dirname(__file__))
 
-from server_config import config_manager, apply_quick_config, QUICK_CONFIGS
+from config.server_config import config_manager, apply_quick_config, QUICK_CONFIGS
 from show_plate_server_multiplate_v2 import MultiPlateStockServer
 
 
