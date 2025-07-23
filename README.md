@@ -572,14 +572,14 @@ Ctrl+Shift+P → Tasks: Run Task → "📊 パフォーマンス監視"
 
 ## 🔗 拡張ドキュメント
 
-- 📋 [クイックリファレンス](QUICK_REFERENCE.md) - 1分起動、トラブルシューティング、よく使うコマンド
+- 📋 [クイックリファレンス](docs/QUICK_REFERENCE.md) - 1分起動、トラブルシューティング、よく使うコマンド
 - 📖 [技術実装詳細](docs/TECHNICAL_DETAILS.md) - SSE ワークフロー、関数呼び出しチェーン、デバッグガイド
 - 🛠️ [設定管理ガイド](docs/CONFIG_GUIDE.md) - 設定ファイル詳細、カスタム設定
 - 🎯 [ベストプラクティス](docs/BEST_PRACTICES.md) - 開発推奨事項、パフォーマンス最適化
 - 🔄 **[新規ページ移行ガイド](docs/NEW_PAGE_MIGRATION_GUIDE.md)** - 詳細なページ追加と旧サービス移行手順
 - 🏗️ [バックエンドフレームワーク最適化](docs/BACKEND_FRAMEWORK_OPTIMIZATION.md) - フレームワーク再構築とコード再利用ガイド
 - 🤝 [貢献ガイド](docs/CONTRIBUTING.md) - プロジェクト開発への参加方法
-- 👥 [貢献者リスト](CONTRIBUTORS.md) - プロジェクト貢献者情報
+- 👥 [貢献者リスト](docs/CONTRIBUTORS.md) - プロジェクト貢献者情報
 
 ## 🤝 貢献ガイド
 
