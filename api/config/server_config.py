@@ -22,53 +22,30 @@ class ServerConfigManager:
     
     def _load_config(self):
         """从文件加载配置"""
-        default_config = {
+        try:
+            if os.path.exists(self.config_path):
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    self.config = json.load(f)
+            else:
+                # 如果配置文件不存在，创建最小默认配置
+                self.config = self._create_minimal_default_config()
+                self.save_config()
+                print(f"配置文件不存在，已创建默认配置: {self.config_path}")
+        except Exception as e:
+            print(f"加载配置文件失败: {e}，创建最小默认配置")
+            self.config = self._create_minimal_default_config()
+            
+    def _create_minimal_default_config(self) -> Dict[str, Any]:
+        """创建最小默认配置"""
+        return {
             "auto_update": {
                 "enabled": True,
                 "interval": 30,
-                "components": ["chart1", "chart2", "table1", "table2"],
                 "random_selection": True,
                 "max_clients": 50,
                 "heartbeat_interval": 30
             },
-            "servers": {
-                "multiplate": {
-                    "port": 5008,
-                    "name": "多板块股票仪表盘",
-                    "auto_update": {
-                        "enabled": True,
-                        "interval": 25,
-                        "components": ["chart1", "chart2", "table1", "table2", "table12", "table21", "table22"],
-                        "random_selection": True,
-                        "max_clients": 30,
-                        "heartbeat_interval": 30
-                    }
-                },
-                "demo": {
-                    "port": 5004,
-                    "name": "演示股票仪表盘",
-                    "auto_update": {
-                        "enabled": True,
-                        "interval": 45,
-                        "components": ["chart1", "table1"],
-                        "random_selection": False,
-                        "max_clients": 20,
-                        "heartbeat_interval": 60
-                    }
-                },
-                "strong": {
-                    "port": 5002,
-                    "name": "强势股票仪表盘",
-                    "auto_update": {
-                        "enabled": True,
-                        "interval": 20,
-                        "components": ["chart1", "chart2", "table1", "upLimitTable"],
-                        "random_selection": True,
-                        "max_clients": 40,
-                        "heartbeat_interval": 30
-                    }
-                }
-            },
+            "servers": {},
             "global": {
                 "debug": True,
                 "host": "0.0.0.0",
@@ -77,29 +54,6 @@ class ServerConfigManager:
                 "log_level": "INFO"
             }
         }
-        
-        try:
-            if os.path.exists(self.config_path):
-                with open(self.config_path, 'r', encoding='utf-8') as f:
-                    loaded_config = json.load(f)
-                    # 递归合并配置
-                    self.config = self._merge_configs(default_config, loaded_config)
-            else:
-                self.config = default_config
-                self.save_config()
-        except Exception as e:
-            print(f"加载配置文件失败: {e}，使用默认配置")
-            self.config = default_config
-    
-    def _merge_configs(self, default: Dict, loaded: Dict) -> Dict:
-        """递归合并配置字典"""
-        result = default.copy()
-        for key, value in loaded.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = self._merge_configs(result[key], value)
-            else:
-                result[key] = value
-        return result
     
     def save_config(self):
         """保存配置到文件"""

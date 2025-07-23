@@ -24,7 +24,7 @@ from flask_cors import CORS
 # 导入新框架基类
 from base_server import BaseStockServer
 from config.server_config import get_server_config, create_auto_update_config
-from processors import ProcessorManager
+from processors.processor_factory import create_processor_manager
 
 # 导入配置驱动架构
 from config.component_config_multi import ComponentManager
@@ -61,12 +61,7 @@ class MultiPlateStockServer(BaseStockServer, SourceDataLogicMixin):
         
         server_name = server_config.get("name", "多板块股票仪表盘")
         
-        super().__init__(port=port, name=server_name, auto_update_config=auto_update_config)
-        
-        # 服务特定的配置
-        # data_cache已经在基类中通过get_data_cache_file_paths()初始化了
-        # response_cache已经在基类中初始化了，无需重复初始化
-        
+        # 先初始化ComponentManager需要的属性
         self.dynamic_titles = {
             "table2": "股票数据表",
             "table21": "股票数据表", 
@@ -75,6 +70,18 @@ class MultiPlateStockServer(BaseStockServer, SourceDataLogicMixin):
             "table24": "股票数据表",
             "table12": "航运概念"
         }
+        
+        # 在调用父类init之前先初始化组件管理器，因为register_custom_routes会在父类init中被调用
+        # 根据服务器类型选择对应的组件配置
+        server_type = "multiplate"  # 可以从配置文件获取或作为参数传入
+        self.component_manager = ComponentManager(self, server_type)
+        
+        super().__init__(port=port, name=server_name, auto_update_config=auto_update_config)
+        
+        # 服务特定的配置
+        # data_cache已经在基类中通过get_data_cache_file_paths()初始化了
+        # response_cache已经在基类中初始化了，无需重复初始化
+        
         self.selected_sector = "航运概念"
         self.latest_update = {
             "sector": "航运概念",
@@ -90,13 +97,13 @@ class MultiPlateStockServer(BaseStockServer, SourceDataLogicMixin):
         # 读取自定义板块
         self.my_plate_list = self._get_my_plate()
         
-        # 初始化处理器管理器
-        self.processor_manager = ProcessorManager(self)
-        
-        # 初始化组件管理器（配置驱动架构）
-        # 根据服务器类型选择对应的组件配置
-        server_type = "multiplate"  # 可以从配置文件获取或作为参数传入
-        self.component_manager = ComponentManager(self, server_type)
+        # 初始化处理器管理器 - 使用新的工厂模式
+        self.processor_manager = create_processor_manager(
+            server_type='multiplate',
+            server_instance=self,
+            data_cache=self.data_cache,
+            logger=self.logger
+        )
         
         # 动态创建处理方法
         self.component_manager.create_handler_methods()
@@ -172,10 +179,54 @@ class MultiPlateStockServer(BaseStockServer, SourceDataLogicMixin):
         return self.component_manager.get_data_sources_config()
 
     def register_custom_routes(self):
-        """注册自定义路由 - 基类会自动调用handler，无需手工注册"""
-        # 由于基类现在支持自动handler调用，大部分路由无需手工注册
-        # 只保留特殊的路由需求
-        pass
+        """注册自定义路由 - 配置驱动版本，带详细日志"""
+        
+        # 从组件配置中自动提取所有API路径并注册路由
+        if hasattr(self, 'component_manager') and self.component_manager:
+            self.logger.info("开始配置驱动的路由注册")
+            
+            # 获取当前服务器类型的所有组件配置
+            components = self.component_manager.components
+            self.logger.info(f"获取到 {len(components)} 个组件配置")
+            
+            # 为每个组件的API路径注册路由
+            registered_count = 0
+            for component_id, component_config in components.items():
+                # 检查组件是否启用（enabled 字段在 extra_config 中）
+                enabled = component_config.extra_config.get('enabled', True)
+                
+                if not enabled:
+                    self.logger.info(f"跳过未启用的组件: {component_id}")
+                    continue  # 跳过未启用的组件
+                
+                api_path = component_config.api_path
+                
+                # 从 api_path 提取方法名
+                if api_path.startswith('/api/'):
+                    method_name = api_path[5:]  # 去掉 "/api/" 前缀
+                else:
+                    method_name = api_path
+                
+                # 创建路由处理函数
+                def create_route_handler(method_name):
+                    """创建路由处理函数，避免闭包问题"""
+                    def handler():
+                        return self.processor_manager.process(method_name)
+                    return handler
+                
+                # 注册路由
+                self.app.add_url_rule(
+                    api_path,  # 使用配置文件中的完整路径
+                    method_name,  # 路由名称
+                    create_route_handler(method_name),
+                    methods=['GET', 'POST']
+                )
+                
+                self.logger.info(f"已注册路由: {api_path} -> {method_name}")
+                registered_count += 1
+            
+            self.logger.info(f"配置驱动路由注册完成，共注册 {registered_count} 个路由")
+           
         
         # 注册SSE和更新相关路由
         self.app.add_url_rule('/api/dashboard/update',

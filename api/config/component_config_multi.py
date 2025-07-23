@@ -4,6 +4,8 @@ Author: chenlei
 Date: 2025-07-22
 """
 
+import os
+import json
 from typing import Dict, Any, Optional, List
 
 class ComponentConfig:
@@ -14,10 +16,10 @@ class ComponentConfig:
                  component_type: str,
                  title: str,
                  api_path: str,
-                 handler: str,
-                 processor_type: str,
-                 processor_method: str,
-                 position: Dict[str, int],
+                 handler: str = None,  # 现在是可选的，可以自动推断
+                 processor_type: str = None,  # 现在是可选的，用于向后兼容
+                 processor_method: str = None,
+                 position: Dict[str, int] = None,
                  description: str = "",
                  height: Optional[str] = None,
                  cache_ttl: int = 0,
@@ -28,10 +30,31 @@ class ComponentConfig:
         self.type = component_type
         self.title = title
         self.api_path = api_path
+        
+        # 如果没有提供 handler，从 api_path 自动推断
+        if handler is None:
+            # 从 "/api/sector_line_chart_change" 生成 "get_sector_line_chart_change_data"
+            if api_path.startswith('/api/'):
+                method_name = api_path[5:]  # 去掉 "/api/" 前缀
+            else:
+                method_name = api_path
+            handler = f"get_{method_name}_data"
+        
         self.handler = handler
-        self.processor_type = processor_type
+        
+        # processor_type 保留用于向后兼容，但不再使用
+        self.processor_type = processor_type or "legacy"
+        
+        # 如果没有提供 processor_method，从 api_path 自动推断
+        if processor_method is None:
+            # 从 "/api/up_limit_table_data" 提取 "up_limit_table_data"
+            if api_path.startswith('/api/'):
+                processor_method = api_path[5:]  # 去掉 "/api/" 前缀
+            else:
+                processor_method = api_path
+        
         self.processor_method = processor_method
-        self.position = position
+        self.position = position or {"row": 0, "col": 0, "rowSpan": 1, "colSpan": 1}
         self.description = description
         self.height = height
         self.cache_ttl = cache_ttl
@@ -68,216 +91,141 @@ class ComponentConfig:
         }
 
 
-# 多服务器组件配置定义
-COMPONENTS_CONFIGS = {
-    "multiplate": {  # 多板块服务器的组件配置
-        "chart1": ComponentConfig(
-            component_id="chart1",
-            component_type="chart",
-            title="板块涨幅折线图",
-            api_path="/api/chart-data/sector-line-chart_change",
-            handler="get_sector_chart_data_change",
-            processor_type="chart",
-            processor_method="sector-line-chart_change",
-            position={"row": 0, "col": 0, "rowSpan": 1, "colSpan": 2},
-            description="板块涨幅折线图数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="sector_line_chart_source_data"
-        ),
-        
-        "chart_speed": ComponentConfig(
-            component_id="chart_speed",
-            component_type="chart", 
-            title="板块涨速累加折线图",
-            api_path="/api/chart-data/sector_speed_chart",
-            handler="get_sector_speed_chart",
-            processor_type="chart",
-            processor_method="sector_speed_chart",
-            position={"row": 5, "col": 0, "rowSpan": 1, "colSpan": 3},
-            description="板块涨速累加图表数据",
-            source_data_keys=["plate_df", "stock_minute_df"],
-            source_data_logic="sector_speed_chart_source_data"
-        ),
-        
-        "chart2": ComponentConfig(
-            component_id="chart2",
-            component_type="chart",
-            title="板块近似涨停折线图", 
-            api_path="/api/chart-data/sector-line-chart_uplimit",
-            handler="get_sector_chart_data_uplimit",
-            processor_type="chart",
-            processor_method="sector-line-chart_uplimit",
-            position={"row": 2, "col": 0, "rowSpan": 1, "colSpan": 3},
-            description="板块近似涨停折线图数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="sector_line_chart_source_data"
-        ),
-        
-        "chart3": ComponentConfig(
-            component_id="chart3",
-            component_type="chart",
-            title="板块红盘率折线图",
-            api_path="/api/chart-data/sector-line-chart_uprate",
-            handler="get_sector_chart_data_uprate",
-            processor_type="chart",
-            processor_method="sector-line-chart_uprate",
-            position={"row": 0, "col": 2, "rowSpan": 1, "colSpan": 1},
-            description="板块红盘率折线图数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="sector_line_chart_source_data"
-        ),
-        
-        "chart4": ComponentConfig(
-            component_id="chart4",
-            component_type="chart",
-            title="板块uprate5折线图",
-            api_path="/api/chart-data/sector-line-chart_uprate5",
-            handler="get_sector_chart_data_uprate5",
-            processor_type="chart",
-            processor_method="sector-line-chart_uprate5",
-            position={"row": 0, "col": 3, "rowSpan": 1, "colSpan": 1},
-            description="板块uprate5折线图数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="sector_line_chart_source_data"
-        ),
-        
-        "table1": ComponentConfig(
-            component_id="table1",
-            component_type="table",
-            title="板块概要数据表",
-            api_path="/api/table-data/plate_info",
-            handler="get_plate_info_table_data",
-            processor_type="table",
-            processor_method="plate_info",
-            position={"row": 1, "col": 0, "rowSpan": 1, "colSpan": 3},
-            height="800px",
-            description="板块概要数据表",
-            source_data_keys=["plate_df"],
-            source_data_logic="plate_info_source_data"
-        ),
-        
-        "table12": ComponentConfig(
-            component_id="table12",
-            component_type="table",
-            title="股票数据表",  # 动态标题将在运行时覆盖
-            api_path="/api/table-data/stocks",
-            handler="get_stocks_table_data",
-            processor_type="table",
-            processor_method="stocks",
-            position={"row": 1, "col": 3, "rowSpan": 1, "colSpan": 1},
-            height="800px",
-            description="股票数据表",
-            source_data_keys=["stock_df", "affinity_df"],
-            source_data_logic="stocks_source_data"
-        ),
-        
-        "upLimitTable": ComponentConfig(
-            component_id="upLimitTable",
-            component_type="table",
-            title="涨停数据表",
-            api_path="/api/table-data/up_limit",
-            handler="get_up_limit_table_data",
-            processor_type="table",
-            processor_method="up_limit",
-            position={"row": 0, "col": 4, "rowSpan": 4, "colSpan": 1},
-            height="1000px",
-            description="涨停数据表",
-            source_data_keys=["up_limit_df"],
-            source_data_logic="up_limit_source_data"
-        ),
-        
-        "plate_sector": ComponentConfig(
-            component_id="plate_sector",
-            component_type="chart",
-            title="今日各板块连板数分布",
-            api_path="/api/chart-data/plate_sector",
-            handler="get_today_plate_up_limit_distribution",
-            processor_type="sector",
-            processor_method="plate_sector",
-            position={"row": 6, "col": 0, "rowSpan": 1, "colSpan": 4},
-            height="700px",
-            description="今日各板块连板数分布",
-            source_data_keys=["stock_all_level_df"],
-            source_data_logic="plate_sector_source_data"
-        ),
-        
-        "plate_sector_v2": ComponentConfig(
-            component_id="plate_sector_v2",
-            component_type="stackedAreaChart",
-            title="今日各板块连板数分布(面积图)",
-            api_path="/api/chart-data/plate_sector_v2",
-            handler="get_today_plate_up_limit_distribution_v2",
-            processor_type="sector",
-            processor_method="plate_sector_v2",
-            position={"row": 7, "col": 0, "rowSpan": 1, "colSpan": 4},
-            height="700px",
-            description="今日各板块连板数分布(堆叠面积图)",
-            source_data_keys=["stock_all_level_df"],
-            source_data_logic="plate_sector_source_data"
-        ),
-    },
+# 组件配置加载器
+class ComponentConfigLoader:
+    """组件配置加载器 - 从 JSON 文件加载配置"""
     
-    "demo": {  # 演示服务器的组件配置
-        "simple_chart": ComponentConfig(
-            component_id="simple_chart",
-            component_type="chart",
-            title="简单股票图表",
-            api_path="/api/chart-data/sector-line-chart_change",
-            handler="get_sector_chart_data_change",
-            processor_type="chart", 
-            processor_method="sector-line-chart_change",
-            position={"row": 0, "col": 0, "rowSpan": 2, "colSpan": 3},
-            description="简单图表数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="sector_line_chart_source_data"
-        ),
-        
-        "basic_table": ComponentConfig(
-            component_id="basic_table",
-            component_type="table",
-            title="基础数据表",
-            api_path="/api/table-data/plate_info",
-            handler="get_plate_info_table_data",
-            processor_type="table",
-            processor_method="plate_info", 
-            position={"row": 2, "col": 0, "rowSpan": 2, "colSpan": 3},
-            description="基础表格数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="plate_info_source_data"
-        )
-    },
+    def __init__(self, config_file: str = "components_config.json"):
+        self.config_file = config_file
+        self.config_path = os.path.join(os.path.dirname(__file__), config_file)
+        self._components_configs = None
     
-    "strong": {  # 强势服务器的组件配置
-        "strong_chart": ComponentConfig(
-            component_id="strong_chart",
-            component_type="chart",
-            title="强势股票分析图",
-            api_path="/api/chart-data/sector-line-chart_change",
-            handler="get_sector_chart_data_change",
-            processor_type="chart",
-            processor_method="sector-line-chart_change",
-            position={"row": 0, "col": 0, "rowSpan": 1, "colSpan": 4},
-            description="强势股票分析数据",
-            source_data_keys=["plate_df"],
-            source_data_logic="sector_line_chart_source_data"
-        ),
+    def load_configs(self) -> Dict[str, Dict[str, Any]]:
+        """从 JSON 文件加载组件配置"""
+        if self._components_configs is not None:
+            return self._components_configs
         
-        "upLimitTable": ComponentConfig(
-            component_id="upLimitTable",
-            component_type="table",
-            title="涨停数据表",
-            api_path="/api/table-data/up_limit",
-            handler="get_up_limit_table_data",
-            processor_type="table",
-            processor_method="up_limit",
-            position={"row": 1, "col": 0, "rowSpan": 3, "colSpan": 4},
-            height="800px",
-            description="涨停数据表",
-            source_data_keys=["up_limit_df"],
-            source_data_logic="up_limit_source_data"
-        )
-    }
-}
+        try:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+            
+            # 将 JSON 数据转换为 ComponentConfig 对象
+            configs = {}
+            for server_type, components in json_data.items():
+                configs[server_type] = {}
+                for comp_id, comp_data in components.items():
+                    # 创建 ComponentConfig 对象
+                    configs[server_type][comp_id] = ComponentConfig(**comp_data)
+            
+            self._components_configs = configs
+            return configs
+            
+        except FileNotFoundError:
+            print(f"Warning: 配置文件 {self.config_path} 不存在，使用空配置")
+            return {"multiplate": {}, "demo": {}, "strong": {}}
+        except json.JSONDecodeError as e:
+            print(f"Warning: 配置文件 JSON 格式错误: {e}，使用空配置")
+            return {"multiplate": {}, "demo": {}, "strong": {}}
+        except Exception as e:
+            print(f"Warning: 加载配置文件失败: {e}，使用空配置")
+            return {"multiplate": {}, "demo": {}, "strong": {}}
+    
+    def reload_configs(self):
+        """重新加载配置"""
+        self._components_configs = None
+        return self.load_configs()
+    
+    def save_configs(self, configs: Dict[str, Dict[str, Any]]):
+        """保存配置到 JSON 文件"""
+        try:
+            # 将 ComponentConfig 对象转换为字典
+            json_data = {}
+            for server_type, components in configs.items():
+                json_data[server_type] = {}
+                for comp_id, comp_config in components.items():
+                    if isinstance(comp_config, ComponentConfig):
+                        json_data[server_type][comp_id] = {
+                            "component_id": comp_config.id,
+                            "component_type": comp_config.type,
+                            "title": comp_config.title,
+                            "api_path": comp_config.api_path,
+                            "handler": comp_config.handler,
+                            "processor_type": comp_config.processor_type,
+                            "processor_method": comp_config.processor_method,
+                            "position": comp_config.position,
+                            "description": comp_config.description,
+                            "height": comp_config.height,
+                            "cache_ttl": comp_config.cache_ttl,
+                            "source_data_keys": comp_config.source_data_keys,
+                            "source_data_logic": comp_config.source_data_logic,
+                            **comp_config.extra_config
+                        }
+                    else:
+                        json_data[server_type][comp_id] = comp_config
+            
+            with open(self.config_path, 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"配置已保存到: {self.config_path}")
+            return True
+            
+        except Exception as e:
+            print(f"保存配置文件失败: {e}")
+            return False
+
+# 全局配置加载器实例
+_config_loader = ComponentConfigLoader()
+
+# 加载组件配置
+COMPONENTS_CONFIGS = _config_loader.load_configs()
+COMPONENTS_CONFIG = COMPONENTS_CONFIGS.get("multiplate", {})
+
+
+def get_components_config(server_type: str = "multiplate") -> Dict[str, ComponentConfig]:
+    """获取指定服务器类型的组件配置"""
+    return COMPONENTS_CONFIGS.get(server_type, {})
+
+
+def get_all_components_configs() -> Dict[str, Dict[str, ComponentConfig]]:
+    """获取所有组件配置"""
+    return COMPONENTS_CONFIGS
+
+
+def reload_components_configs():
+    """重新加载组件配置"""
+    global COMPONENTS_CONFIGS, COMPONENTS_CONFIG
+    COMPONENTS_CONFIGS = _config_loader.reload_configs()
+    COMPONENTS_CONFIG = COMPONENTS_CONFIGS.get("multiplate", {})
+    return COMPONENTS_CONFIGS
+
+
+def save_components_configs():
+    """保存组件配置"""
+    return _config_loader.save_configs(COMPONENTS_CONFIGS)
+
+
+def add_component_config(server_type: str, component_id: str, component_config: ComponentConfig):
+    """动态添加组件配置"""
+    if server_type not in COMPONENTS_CONFIGS:
+        COMPONENTS_CONFIGS[server_type] = {}
+    
+    COMPONENTS_CONFIGS[server_type][component_id] = component_config
+
+
+def remove_component_config(server_type: str, component_id: str):
+    """移除组件配置"""
+    if server_type in COMPONENTS_CONFIGS and component_id in COMPONENTS_CONFIGS[server_type]:
+        del COMPONENTS_CONFIGS[server_type][component_id]
+
+
+def update_component_config(server_type: str, component_id: str, **kwargs):
+    """更新组件配置"""
+    if server_type in COMPONENTS_CONFIGS and component_id in COMPONENTS_CONFIGS[server_type]:
+        comp_config = COMPONENTS_CONFIGS[server_type][component_id]
+        for key, value in kwargs.items():
+            if hasattr(comp_config, key):
+                setattr(comp_config, key, value)
+
 
 
 class ComponentManager:
@@ -362,8 +310,8 @@ class ComponentManager:
     def _create_handler_method(self, comp_config: ComponentConfig):
         """创建单个处理方法"""
         def handler_method():
-            processor_method = getattr(self.server.processor_manager, f'process_{comp_config.processor_type}_data')
-            return processor_method(comp_config.processor_method)
+            # 使用新的处理器管理器架构，直接调用process方法
+            return self.server.processor_manager.process(comp_config.processor_method)
         
         # 设置方法名和文档字符串
         handler_method.__name__ = comp_config.handler
@@ -371,7 +319,3 @@ class ComponentManager:
         
         # 将方法绑定到服务器实例
         setattr(self.server, comp_config.handler, handler_method)
-
-
-# 为了向后兼容，保留原来的COMPONENTS_CONFIG  
-COMPONENTS_CONFIG = COMPONENTS_CONFIGS.get("multiplate", {})

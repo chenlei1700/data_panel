@@ -38,7 +38,7 @@ const router = createRouter({
 
 // 设置页面标题
 router.beforeEach((to, from, next) => {
-  if (to.meta?.title) {
+  if (to.meta && to.meta.title) {
     document.title = to.meta.title
   }
   next()

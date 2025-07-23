@@ -488,13 +488,19 @@ class BaseStockServer(ABC):
         """获取自动更新状态"""
         try:
             thread_alive = hasattr(self, 'update_thread') and self.update_thread.is_alive()
+            
+            # 从 ComponentManager 获取组件列表
+            available_components = []
+            if hasattr(self, 'component_manager'):
+                available_components = list(self.component_manager.components.keys())
+            
             return jsonify({
                 "status": "success",
                 "auto_update": {
                     "enabled": self.auto_update_config['enabled'],
                     "thread_running": thread_alive,
                     "interval": self.auto_update_config['interval'],
-                    "components": self.auto_update_config['components'],
+                    "components": available_components,
                     "sse_clients": len(self.sse_clients),
                     "max_clients": self.auto_update_config['max_clients']
                 }
@@ -957,7 +963,12 @@ class BaseStockServer(ABC):
                     self._cleanup_sse_clients()
                 
                 # 获取参与自动更新的组件列表
-                components = self.auto_update_config['components']
+                components = []
+                if hasattr(self, 'component_manager'):
+                    # 从 ComponentManager 获取启用的组件
+                    components = [comp_id for comp_id, comp_config in self.component_manager.components.items() 
+                                if comp_config.extra_config.get('enabled', True)]
+                
                 if not components:
                     self.logger.warning("自动更新组件列表为空")
                     continue

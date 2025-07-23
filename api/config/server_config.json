@@ -2,32 +2,17 @@
   "auto_update": {
     "enabled": true,
     "interval": 30,
-    "components": [
-      "chart1",
-      "chart2",
-      "table1",
-      "table2"
-    ],
     "random_selection": true,
     "max_clients": 50,
     "heartbeat_interval": 30
   },
   "servers": {
     "multiplate": {
-      "port": 5008,
+      "port": 5007,
       "name": "多板块股票仪表盘",
       "auto_update": {
         "enabled": true,
         "interval": 25,
-        "components": [
-          "chart1",
-          "chart2",
-          "table1",
-          "table2",
-          "table12",
-          "table21",
-          "table22"
-        ],
         "random_selection": true,
         "max_clients": 30,
         "heartbeat_interval": 30
@@ -38,14 +23,9 @@
       "name": "演示股票仪表盘",
       "auto_update": {
         "enabled": true,
-        "interval": 45,
-        "components": [
-          "chart1",
-          "table1"
-        ],
-        "random_selection": false,
-        "max_clients": 20,
-        "heartbeat_interval": 60
+        "interval": 10,
+        "random_selection": true,
+        "max_clients": 30
       }
     },
     "strong": {
@@ -54,12 +34,6 @@
       "auto_update": {
         "enabled": true,
         "interval": 20,
-        "components": [
-          "chart1",
-          "chart2",
-          "table1",
-          "upLimitTable"
-        ],
         "random_selection": true,
         "max_clients": 40,
         "heartbeat_interval": 30

@@ -1,0 +1,252 @@
+{
+  "multiplate": {
+    "chart1": {
+      "component_id": "chart1",
+      "component_type": "chart",
+      "title": "板块涨幅折线图",
+      "api_path": "/api/sector_line_chart_change",
+      "position": {
+        "row": 0,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "description": "板块涨幅折线图数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "sector_line_chart_source_data",
+      "enabled": true
+    },
+    
+    "chart_speed": {
+      "component_id": "chart_speed",
+      "component_type": "chart",
+      "title": "板块涨速累加折线图",
+      "api_path": "/api/sector_speed_chart",
+      "position": {
+        "row": 5,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 3
+      },
+      "description": "板块涨速累加图表数据",
+      "source_data_keys": ["plate_df", "stock_minute_df"],
+      "source_data_logic": "sector_speed_chart_source_data",
+      "enabled": true
+    },
+    
+    "chart2": {
+      "component_id": "chart2",
+      "component_type": "chart",
+      "title": "板块近似涨停折线图",
+      "api_path": "/api/sector_line_chart_uplimit",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 3
+      },
+      "description": "板块近似涨停折线图数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "sector_line_chart_source_data",
+      "enabled": true
+    },
+    
+    "chart3": {
+      "component_id": "chart3",
+      "component_type": "chart",
+      "title": "板块红盘率折线图",
+      "api_path": "/api/sector_line_chart_uprate",
+      "position": {
+        "row": 0,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 1
+      },
+      "description": "板块红盘率折线图数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "sector_line_chart_source_data",
+      "enabled": true
+    },
+    
+    "chart4": {
+      "component_id": "chart4",
+      "component_type": "chart",
+      "title": "板块uprate5折线图",
+      "api_path": "/api/sector_line_chart_uprate5",
+      "position": {
+        "row": 0,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1
+      },
+      "description": "板块uprate5折线图数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "sector_line_chart_source_data",
+      "enabled": true
+    },
+    
+    "table1": {
+      "component_id": "table1",
+      "component_type": "table",
+      "title": "板块概要数据表",
+      "api_path": "/api/plate_info_table_data",
+      "position": {
+        "row": 1,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 3
+      },
+      "height": "800px",
+      "description": "板块概要数据表",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "plate_info_source_data",
+      "enabled": true
+    },
+    
+    "table12": {
+      "component_id": "table12",
+      "component_type": "table",
+      "title": "股票数据表",
+      "api_path": "/api/stocks_table_data",
+      "position": {
+        "row": 1,
+        "col": 3,
+        "rowSpan": 1,
+        "colSpan": 1
+      },
+      "height": "800px",
+      "description": "股票数据表",
+      "source_data_keys": ["stock_df", "affinity_df"],
+      "source_data_logic": "stocks_source_data",
+      "enabled": true,
+      "dynamic_title": true
+    },
+    
+    "upLimitTable": {
+      "component_id": "upLimitTable",
+      "component_type": "table",
+      "title": "涨停数据表",
+      "api_path": "/api/up_limit_table_data",
+      "position": {
+        "row": 0,
+        "col": 4,
+        "rowSpan": 4,
+        "colSpan": 1
+      },
+      "height": "1000px",
+      "description": "涨停数据表",
+      "source_data_keys": ["up_limit_df"],
+      "source_data_logic": "up_limit_source_data",
+      "enabled": true
+    },
+    
+    "plate_sector": {
+      "component_id": "plate_sector",
+      "component_type": "chart",
+      "title": "今日各板块连板数分布",
+      "api_path": "/api/today_plate_up_limit_distribution",
+      "position": {
+        "row": 6,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 4
+      },
+      "height": "700px",
+      "description": "今日各板块连板数分布",
+      "source_data_keys": ["stock_all_level_df"],
+      "source_data_logic": "plate_sector_source_data",
+      "enabled": true
+    },
+    
+    "plate_sector_v2": {
+      "component_id": "plate_sector_v2",
+      "component_type": "stackedAreaChart",
+      "title": "今日各板块连板数分布(面积图)",
+      "api_path": "/api/today_plate_up_limit_distribution_v2",
+      "position": {
+        "row": 7,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 4
+      },
+      "height": "700px",
+      "description": "今日各板块连板数分布(堆叠面积图)",
+      "source_data_keys": ["stock_all_level_df"],
+      "source_data_logic": "plate_sector_source_data",
+      "enabled": true
+    }
+  },
+  
+  "demo": {
+    "simple_chart": {
+      "component_id": "simple_chart",
+      "component_type": "chart",
+      "title": "简单股票图表",
+      "api_path": "/api/sector_line_chart_change",
+      "position": {
+        "row": 0,
+        "col": 0,
+        "rowSpan": 2,
+        "colSpan": 3
+      },
+      "description": "简单图表数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "sector_line_chart_source_data",
+      "enabled": true
+    },
+    
+    "basic_table": {
+      "component_id": "basic_table",
+      "component_type": "table",
+      "title": "基础数据表",
+      "api_path": "/api/plate_info_table_data",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 2,
+        "colSpan": 3
+      },
+      "description": "基础表格数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "plate_info_source_data",
+      "enabled": true
+    }
+  },
+  
+  "strong": {
+    "strong_chart": {
+      "component_id": "strong_chart",
+      "component_type": "chart",
+      "title": "强势股票分析图",
+      "api_path": "/api/sector_line_chart_change",
+      "position": {
+        "row": 0,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 4
+      },
+      "description": "强势股票分析数据",
+      "source_data_keys": ["plate_df"],
+      "source_data_logic": "sector_line_chart_source_data",
+      "enabled": true
+    },
+    
+    "upLimitTable": {
+      "component_id": "upLimitTable",
+      "component_type": "table",
+      "title": "涨停数据表",
+      "api_path": "/api/up_limit_table_data",
+      "position": {
+        "row": 1,
+        "col": 0,
+        "rowSpan": 3,
+        "colSpan": 4
+      },
+      "height": "800px",
+      "description": "涨停数据表",
+      "source_data_keys": ["up_limit_df"],
+      "source_data_logic": "up_limit_source_data",
+      "enabled": true
+    }
+  }
+}
