@@ -4,11 +4,11 @@ Author: chenlei
 Date: 2025-07-22
 """
 
-from base_server import BaseStockServer
-from config.server_config import get_server_config
-from processors import ProcessorManager
-from config.component_config_multi import ComponentManager
-from config.source_data_mixin import SourceDataLogicMixin
+from .base_server import BaseStockServer
+from ..config.server_config import get_server_config
+from ..processors import ProcessorManager
+from ..config.component_config_multi import ComponentManager
+from ..config.source_data_mixin import SourceDataLogicMixin
 
 class DemoStockServer(BaseStockServer, SourceDataLogicMixin):
     """演示股票服务器 - 简化版本，只显示基础图表和表格"""

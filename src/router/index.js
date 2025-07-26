@@ -29,6 +29,15 @@ const routes = [
       apiService: 'stacked_area_demo'  // 对应API配置中的键名，使用端口5007
     }
   },
+  {
+    path: '/market_review',
+    name: 'market_review',
+    component: StockDashboard,
+    meta: {
+      title: '复盘页面',
+      apiService: 'market_review'  // 对应API配置中的键名，使用端口5008
+    }
+  },
 ]
 
 const router = createRouter({
@@ -38,7 +47,7 @@ const router = createRouter({
 
 // 设置页面标题
 router.beforeEach((to, from, next) => {
-  if (to.meta && to.meta.title) {
+  if (to.meta?.title) {
     document.title = to.meta.title
   }
   next()

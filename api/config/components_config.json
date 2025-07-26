@@ -176,7 +176,62 @@
       "enabled": true
     }
   },
-  
+  "market_review": {
+    
+    "upLimitTable": {
+      "component_id": "upLimitTable",
+      "component_type": "table",
+      "title": "涨停数据表",
+      "api_path": "/api/up_limit_table_data",
+      "position": {
+        "row": 0,
+        "col": 4,
+        "rowSpan": 4,
+        "colSpan": 1
+      },
+      "height": "1000px",
+      "description": "涨停数据表",
+      "source_data_keys": ["up_limit_df"],
+      "source_data_logic": "up_limit_source_data",
+      "enabled": true
+    },
+    
+    "plate_sector": {
+      "component_id": "plate_sector",
+      "component_type": "chart",
+      "title": "今日各板块连板数分布",
+      "api_path": "/api/today_plate_up_limit_distribution",
+      "position": {
+        "row": 6,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 4
+      },
+      "height": "700px",
+      "description": "今日各板块连板数分布",
+      "source_data_keys": ["stock_all_level_df"],
+      "source_data_logic": "plate_sector_source_data",
+      "enabled": true
+    },
+    
+    "plate_sector_v2": {
+      "component_id": "plate_sector_v2",
+      "component_type": "stackedAreaChart",
+      "title": "今日各板块连板数分布(面积图)",
+      "api_path": "/api/today_plate_up_limit_distribution_v2",
+      "position": {
+        "row": 7,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 4
+      },
+      "height": "700px",
+      "description": "今日各板块连板数分布(堆叠面积图)",
+      "source_data_keys": ["stock_all_level_df"],
+      "source_data_logic": "plate_sector_source_data",
+      "enabled": true
+    }
+  },
   "demo": {
     "simple_chart": {
       "component_id": "simple_chart",

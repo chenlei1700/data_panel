@@ -21,7 +21,7 @@ from flask import request, Response, jsonify
 from flask_cors import CORS
 
 # 导入新框架基类
-from base_server import BaseStockServer
+from .base_server import BaseStockServer
 
 class StackedAreaDemoServer(BaseStockServer):
     """堆叠面积图演示服务器 - 继承自BaseStockServer"""

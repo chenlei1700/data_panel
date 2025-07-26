@@ -28,6 +28,19 @@ export const API_CONFIG = {
     }
   },
 
+  // 复盘页面 - 使用端口5008
+  'market_review': {
+    baseURL: 'http://localhost:5008',
+    name: '复盘页面数据服务',
+    endpoints: {
+      dashboardConfig: '/api/dashboard-config',
+      chartData: '/api/chart-data',
+      tableData: '/api/table-data',
+      updates: '/api/dashboard/updates',
+      health: '/health',
+    }
+  },
+
 }
 
 /**

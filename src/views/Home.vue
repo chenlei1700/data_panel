@@ -66,6 +66,16 @@
           </div>
         </router-link>
 
+        <router-link to="/market_review" class="dashboard-card">
+          <div class="card-icon">📊</div>
+          <h3>复盘页面</h3>
+          <p>复盘页面</p>
+          <div class="card-status">
+            <span class="status-dot" :class="{ active: serviceStatus.marketreview }"></span>
+            {{ serviceStatus.marketreview ? '服务正常' : '服务未启动' }}
+          </div>
+        </router-link>
+
       </div>
     </section>
 
@@ -86,7 +96,7 @@
             <span>API连接</span>
           </div>
           <div class="status-value" :class="{ good: connectedServices > 0, warning: connectedServices === 0 }">
-            {{ connectedServices }}/2 服务在线
+            {{ connectedServices }}/3 服务在线
           </div>
         </div>
         <div class="status-item">
@@ -126,6 +136,7 @@ export default {
     const serviceStatus = ref({
       demo1: false,
       stackedareademo: false,
+      marketreview: false,
     })
     
     const lastUpdateTime = ref('检查中...')
@@ -135,6 +146,7 @@ export default {
       const services = [
         { key: 'demo1', url: 'http://localhost:5004/health' },
         { key: 'stackedareademo', url: 'http://localhost:5007/health' },
+        { key: 'marketreview', url: 'http://localhost:5008/health' },
       ]
 
       for (const service of services) {

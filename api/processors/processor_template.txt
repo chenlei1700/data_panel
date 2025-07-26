@@ -1,0 +1,137 @@
+"""
+{processor_name}处理器模板
+Author: Auto-generated
+Date: {date}
+Description: {description}
+"""
+from .base_processor import BaseDataProcessor
+from flask import jsonify, request
+import pandas as pd
+import time
+import numpy as np
+
+class {class_name}Processor(BaseDataProcessor):
+    """{description}数据处理器"""
+    
+    def process(self, method_name: str):
+        """
+        处理请求的主入口
+        
+        Args:
+            method_name: 方法名称
+            
+        Returns:
+            Flask响应对象
+        """
+        try:
+            # 构建缓存参数
+            cache_params = self.build_cache_params(method=method_name)
+            
+            # 检查是否有对应的处理方法
+            if hasattr(self, method_name):
+                method = getattr(self, method_name)
+                
+                # 获取源数据（用于缓存判断）
+                source_data = self.server._get_source_data_for_endpoint(f"/api/{{method_name}}")
+                
+                # 检查是否应该使用缓存
+                if self.should_use_cache(method_name, cache_params, source_data):
+                    cached_response = self.response_cache.get_cached_response(method_name, cache_params)
+                    if cached_response:
+                        self.logger.info(f"返回{processor_name}缓存数据: {{method_name}}")
+                        return cached_response
+                
+                # 执行方法获取新数据
+                self.logger.info(f"执行{processor_name}方法: {{method_name}}")
+                result = method()
+                
+                # 存储到缓存
+                self.store_cache(method_name, cache_params, source_data, result)
+                
+                return result
+            else:
+                return self.error_response(f"方法 {{method_name}} 不存在", 404)
+                
+        except Exception as e:
+            return self.error_response(f"处理请求失败: {{str(e)}}")
+    
+    def get_available_methods(self):
+        """获取所有可用的处理方法"""
+        methods = []
+        for attr_name in dir(self):
+            if not attr_name.startswith('_') and callable(getattr(self, attr_name)):
+                if attr_name not in ['process', 'get_available_methods', 'get_request_params', 
+                                   'build_cache_params', 'should_use_cache', 'store_cache', 'error_response']:
+                    methods.append(attr_name)
+        return methods
+    
+    # ===== 示例数据处理方法 =====
+    # 以下是一些示例方法，您可以根据需要修改或添加新方法
+    
+    def chart1(self):
+        """示例图表1数据"""
+        try:
+            # TODO: 根据您的业务需求实现具体的数据处理逻辑
+            # 这里是一个示例实现
+            
+            # 获取请求参数
+            params = self.get_request_params()
+            
+            # 从数据缓存加载数据
+            # data = self.data_cache.load_data('your_data_file')
+            
+            # 处理数据逻辑
+            sample_data = {{
+                "title": "{processor_name} - 图表1",
+                "data": [
+                    {{"x": "2024-01", "y": 100}},
+                    {{"x": "2024-02", "y": 120}},
+                    {{"x": "2024-03", "y": 110}}
+                ],
+                "timestamp": time.time(),
+                "params": params
+            }}
+            
+            return jsonify(sample_data)
+            
+        except Exception as e:
+            return self.error_response(f"获取chart1数据失败: {{str(e)}}")
+    
+    def table1(self):
+        """示例表格1数据"""
+        try:
+            # TODO: 实现表格数据处理逻辑
+            
+            params = self.get_request_params()
+            
+            sample_data = {{
+                "title": "{processor_name} - 表格1",
+                "columns": ["名称", "数值", "变化"],
+                "data": [
+                    ["项目1", 100, "+5%"],
+                    ["项目2", 200, "+3%"],
+                    ["项目3", 150, "-2%"]
+                ],
+                "timestamp": time.time(),
+                "params": params
+            }}
+            
+            return jsonify(sample_data)
+            
+        except Exception as e:
+            return self.error_response(f"获取table1数据失败: {{str(e)}}")
+    
+    def config(self):
+        """获取{processor_name}配置信息"""
+        try:
+            config_data = {{
+                "processor_name": self.processor_name,
+                "available_methods": self.get_available_methods(),
+                "description": "{description}",
+                "timestamp": time.time()
+            }}
+            
+            return jsonify(config_data)
+            
+        except Exception as e:
+            return self.error_response(f"获取配置信息失败: {{str(e)}}")

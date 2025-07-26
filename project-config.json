@@ -33,6 +33,19 @@
       "component": "StockDashboard",
       "taskLabel": "多板块演示服务器",
       "enabled": true
+    },
+    {
+      "id": "market_review",
+      "name": "复盘页面",
+      "description": "复盘页面",
+      "icon": "📊",
+      "port": 5008,
+      "path": "/market_review",
+      "title": "复盘页面",
+      "serverFile": "review_market_server.py",
+      "component": "StockDashboard",
+      "taskLabel": "复盘页面服务器",
+      "enabled": true
     }
   ],
   "apiEndpoints": {
