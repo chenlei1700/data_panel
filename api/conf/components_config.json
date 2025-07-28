@@ -177,7 +177,40 @@
     }
   },
   "market_review": {
-    
+    "marketAmount": {
+      "component_id": "marketAmount",
+      "component_type": "chart",
+      "title": "各市场成交额",
+      "api_path": "/api/market_sentiment_daily",
+      "position": {
+        "row": 0,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "500px",
+      "description": "各市场成交额",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "marketchange": {
+      "component_id": "marketChange",
+      "component_type": "chart",
+      "title": "各市场涨幅",
+      "api_path": "/api/market_change_daily",
+      "position": {
+        "row": 1,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "500px",
+      "description": "各市场成交额",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
     "upLimitTable": {
       "component_id": "upLimitTable",
       "component_type": "table",
@@ -229,6 +262,58 @@
       "description": "今日各板块连板数分布(堆叠面积图)",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
+      "enabled": true
+    },
+    
+    "all_market_change_dist": {
+      "component_id": "all_market_change_dist",
+      "component_type": "stackedAreaChart",
+      "title": "全市场涨幅分布(面积图)",
+      "api_path": "/api/all_market_change_distribution",
+      "position": {
+        "row": 1,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "900px",
+      "description": "今日各市场涨幅分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "chuangye_change_dist": {
+      "component_id": "chuangye_change_dist",
+      "component_type": "stackedAreaChart",
+      "title": "创业板涨幅分布(面积图)",
+      "api_path": "/api/chuangye_change_distribution",
+      "position": {
+        "row": 1,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "900px",
+      "description": "今日各市场涨幅分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "st_change_dist": {
+      "component_id": "st_change_dist",
+      "component_type": "stackedAreaChart",
+      "title": "ST板块涨幅分布(面积图)",
+      "api_path": "/api/st_change_distribution",
+      "position": {
+        "row": 0,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "900px",
+      "description": "今日各市场涨幅分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
       "enabled": true
     }
   },

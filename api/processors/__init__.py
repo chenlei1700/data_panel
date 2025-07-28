@@ -9,7 +9,6 @@ from .processor_factory import ProcessorFactory, SimplifiedProcessorManager, cre
 from .base_processor import BaseDataProcessor
 from .multiplate_processor import MultiPlateProcessor
 from .demo_processor import DemoProcessor
-from .strong_processor import StrongProcessor
 
 __all__ = [
     'ProcessorFactory',

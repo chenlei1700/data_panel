@@ -23,12 +23,12 @@ from flask_cors import CORS
 
 # 导入新框架基类
 from .base_server import BaseStockServer
-from ..config.server_config import get_server_config, create_auto_update_config
+from ..conf.server_config import get_server_config, create_auto_update_config
 from ..processors.processor_factory import create_processor_manager
 
 # 导入配置驱动架构
-from ..config.component_config_multi import ComponentManager
-from ..config.source_data_mixin import SourceDataLogicMixin
+from ..conf.component_config_multi import ComponentManager
+from ..conf.source_data_mixin import SourceDataLogicMixin
 
 # 将项目根目录添加到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))

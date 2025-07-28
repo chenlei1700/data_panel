@@ -4,6 +4,9 @@ Author: Auto-generated
 Date: 2025-07-26
 Description: 复盘页面
 """
+from stock_data.factor.index.daily import FactorIndexDailyData
+from stock_data.sentiment.market.daily import MarketSentimentDailyData
+from stock_data.stock.index_daily import IndexDailyData
 from .base_processor import BaseDataProcessor
 from flask import jsonify, request
 import pandas as pd
@@ -13,6 +16,70 @@ import time
 
 class MarketReviewProcessor(BaseDataProcessor):
     """复盘页面数据处理器"""
+    def process_market_sentiment_daily(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
+        d = FactorIndexDailyData()
+        df = d.get_daily_data(start_date='2025-03-01')
+        # 成交额amount变为以亿为单位，并保留2位小数
+        df['amount'] = df['amount'] / 1e8
+        df['amount'] = df['amount'].round(2)
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        market_list = ['主板', '创业板', '科创板', 'ST','全市场']
+        chart_data = []
+        for market in market_list:
+            market_data = df[df['name'] == market]
+            if not market_data.empty:
+                market_data = market_data.sort_values(by='trade_date')
+                chart_data.append({
+                    "name": f'{market}成交额',
+                    "x": market_data['date_str'].tolist(),
+                    "y": market_data['amount'].tolist()
+                })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "各市场成交额",
+                "xaxis": {"title": "时间"},
+                "yaxis": {"title": "成交额(亿元)"},
+                "legend": {"title": "市场名称"}
+            }
+        })
+    
+    def process_market_change_daily(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
+        d = FactorIndexDailyData()
+        df = d.get_daily_data(start_date='2025-03-01')
+        # 成交额amount变为以亿为单位，并保留2位小数
+       
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        market_list = ['主板', '创业板', 'ST','全市场']
+        # 对name列groupby，计算change列的cumsum
+        df['change'] = df.groupby('name')['change'].cumsum()
+        chart_data = []
+        for market in market_list:
+            market_data = df[df['name'] == market]
+            if not market_data.empty:
+                market_data = market_data.sort_values(by='trade_date')
+                chart_data.append({
+                    "name": f'{market}涨幅',
+                    "x": market_data['date_str'].tolist(),
+                    "y": market_data['change'].tolist()
+                })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "各市场成交额",
+                "xaxis": {"title": "时间"},
+                "yaxis": {"title": "成交额(亿元)"},
+                "legend": {"title": "市场名称"}
+            }
+        })
     def process_sector_line_chart_change(self):
         """板块涨幅折线图数据"""
         try:
@@ -847,7 +914,223 @@ class MarketReviewProcessor(BaseDataProcessor):
     # =========================================================================
     # 板块处理方法 (原 sector_processor.py 中的方法)
     # =========================================================================
-    
+    def build_stacked_area_data(self, df, x_axis_col, data_columns_config, colors=None):
+        """
+        构建堆叠面积图数据的通用函数
+        
+        Args:
+            df: 数据DataFrame
+            x_axis_col: x轴列名
+            data_columns_config: 数据列配置，格式为 [{"key": "显示名称", "column": "列名"}, ...]
+            colors: 颜色列表，如果不提供则使用默认颜色
+        
+        Returns:
+            dict: 包含stackedAreaData、xAxisValues、tableData的字典
+        """
+        try:
+            # 构建 stackedAreaChart 数据格式
+            xAxisValues = df[x_axis_col].tolist()  # x轴数据
+            
+            # 构建数据字典
+            data = {}
+            table_data = {}
+            hover_data = {}
+            
+            for _, row in df.iterrows():
+                x_value = row[x_axis_col]
+                
+                # 按照配置顺序构建数据
+                row_data = {}
+                row_hover = {}
+                
+                for config in data_columns_config:
+                    key = config["key"]
+                    column = config["column"]
+                    value = int(row[column]) if pd.notna(row[column]) else 0
+                    
+                    row_data[key] = value
+                    row_hover[key] = [f"{value}只"]
+                
+                data[x_value] = row_data
+                
+                # 计算总数
+                total = sum(row_data.values())
+                table_data[x_value] = f"{total}只"
+                hover_data[x_value] = row_hover
+            
+            # 定义显示顺序和颜色
+            keyOrder = [config["key"] for config in data_columns_config]
+            
+            if colors is None:
+                # 默认颜色配置
+                default_colors = ['#00008B', '#4169E1', '#87CEEB', '#FFA07A', '#FF6B6B', '#FF0000', 
+                                '#9932CC', '#FF69B4', '#FFD700', '#32CD32', '#FF4500', '#1E90FF']
+                colors = default_colors[:len(keyOrder)]
+            
+            # 构建返回数据
+            return {
+                "stackedAreaData": {
+                    "data": data,
+                    "keyOrder": keyOrder,
+                    "colors": colors,
+                    "hoverData": hover_data
+                },
+                "xAxisValues": xAxisValues,
+                "tableData": table_data
+            }
+            
+        except Exception as e:
+            self.logger.error(f"构建堆叠面积图数据失败: {e}")
+            return None
+
+    def process_all_market_change_distribution(self):
+        """
+        获取全市场日线级别各涨幅分布的股票数
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：limit_up_count, up5, up0, down0, down5, limit_down_count
+        """
+        try:
+            d = MarketSentimentDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+            
+            # 过滤掉不需要的板块，只保留全市场数据
+            df = df[df['name'] == '全市场']
+            
+            # 计算各个区间的股票数
+            df['up5'] = df['up5_count'] - df['limit_up_count']
+            df['down5'] = df['down5_count'] - df['limit_down_count']
+            df['up0'] = df['up_count'] - df['up5_count']      
+            df['down0'] = df['down_count'] - df['down5_count']
+            
+            # 按日期排序
+            df = df.sort_values('trade_date')
+
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "跌停", "column": "limit_down_count"},
+                {"key": "跌5-10%", "column": "down5"},
+                {"key": "跌0-5%", "column": "down0"},
+                {"key": "涨0-5%", "column": "up0"},
+                {"key": "涨5-10%", "column": "up5"},
+                {"key": "涨停", "column": "limit_up_count"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', '#FFA07A', '#FF6B6B', '#FF0000']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
+
+    def process_chuangye_change_distribution(self):
+        """
+        获取创业板日线级别各涨幅分布的股票数
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：limit_up_count, up5, up0, down0, down5, limit_down_count
+        """
+        try:
+            d = MarketSentimentDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+            # 过滤掉不需要的板块，只保留创业板数据
+            df = df[df['name'] == '创业板']
+            
+            # 计算各个区间的股票数
+            df['up5'] = df['up5_count'] - df['limit_up_count']
+            df['down5'] = df['down5_count'] - df['limit_down_count']
+            df['up0'] = df['up_count'] - df['up5_count']      
+            df['down0'] = df['down_count'] - df['down5_count']
+            
+            # 按日期排序
+            df = df.sort_values('trade_date')
+
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "跌停", "column": "limit_down_count"},
+                {"key": "跌5-10%", "column": "down5"},
+                {"key": "跌0-5%", "column": "down0"},
+                {"key": "涨0-5%", "column": "up0"},
+                {"key": "涨5-10%", "column": "up5"},
+                {"key": "涨停", "column": "limit_up_count"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', '#FFA07A', '#FF6B6B', '#FF0000']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
+        
+    def process_st_change_distribution(self):
+        """
+        获取创业板日线级别各涨幅分布的股票数
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：limit_up_count, up5, up0, down0, down5, limit_down_count
+        """
+        try:
+            d = MarketSentimentDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+            # 过滤掉不需要的板块，只保留ST数据
+            df = df[df['name'] == 'ST']
+            
+            # 计算各个区间的股票数
+            df['up5'] = df['up5_count'] - df['limit_up_count']
+            df['down5'] = df['down5_count'] - df['limit_down_count']
+            df['up0'] = df['up_count'] - df['up5_count']      
+            df['down0'] = df['down_count'] - df['down5_count']
+            
+            # 按日期排序
+            df = df.sort_values('trade_date')
+
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "跌停", "column": "limit_down_count"},
+                {"key": "跌5-10%", "column": "down5"},
+                {"key": "跌0-5%", "column": "down0"},
+                {"key": "涨0-5%", "column": "up0"},
+                {"key": "涨5-10%", "column": "up5"},
+                {"key": "涨停", "column": "limit_up_count"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', '#FFA07A', '#FF6B6B', '#FF0000']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")    
+            
     def process_today_plate_up_limit_distribution(self):
         """
         获取今日各板块连板数分布，横轴为板块名称，纵轴为股票个数
