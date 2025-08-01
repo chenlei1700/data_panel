@@ -21,6 +21,52 @@ class DemoProcessor(BaseDataProcessor):
     """演示服务器专用处理器 - 统一管理所有处理逻辑"""
     
     # =========================================================================
+    # 启动缓存示例方法
+    # =========================================================================
+    
+    def process_demo_startup_cache_chart(self):
+        """演示启动缓存图表数据 - 使用启动缓存"""
+        return self._process_with_startup_cache('/api/demo_startup_cache_chart', self._original_demo_startup_cache_chart)
+    
+    def _original_demo_startup_cache_chart(self):
+        """原始演示启动缓存图表数据处理方法"""
+        try:
+            self.logger.info("处理演示启动缓存图表数据")
+            
+            # 模拟计算量较大的操作
+            time.sleep(0.2)  # 模拟计算时间
+            
+            # 生成示例数据
+            sample_data = {
+                "chartType": "line",
+                "data": [
+                    {
+                        "x": ["2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06"],
+                        "y": [100, 120, 110, 130, 140, 135],
+                        "type": "scatter",
+                        "mode": "lines+markers",
+                        "name": "启动缓存数据系列"
+                    }
+                ],
+                "layout": {
+                    "title": "演示启动缓存图表",
+                    "xaxis": {"title": "月份"},
+                    "yaxis": {"title": "数值"},
+                    "legend": {"title": "系列"}
+                },
+                "metadata": {
+                    "description": "这是一个使用启动缓存的演示图表",
+                    "cache_type": "startup_once",
+                    "note": "数据在服务启动时计算一次，之后直接返回缓存结果"
+                }
+            }
+            
+            return jsonify(sample_data)
+            
+        except Exception as e:
+            return self.error_response(f"生成演示启动缓存图表数据失败: {e}")
+    
+    # =========================================================================
     # 图表处理方法
     # =========================================================================
     

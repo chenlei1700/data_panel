@@ -26,6 +26,9 @@ import os
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional, Tuple
 
+# 导入启动缓存
+from startup_cache import StartupOnceCache
+
 
 class BaseDataCache:
     """基础数据缓存类 - 用于数据文件的缓存管理"""
@@ -239,12 +242,18 @@ class BaseStockServer(ABC):
         self.data_cache = BaseDataCache(self.get_data_cache_file_paths())
         self.response_cache = BaseResponseCache()
         
+        # 初始化启动缓存
+        self.startup_cache = StartupOnceCache()
+        
         # SSE相关
         self.sse_clients = []
         self.latest_update = {"componentId": None, "params": {}}
         
         # 注册通用路由
         self._register_routes()
+        
+        # 计划启动缓存预热
+        self._schedule_startup_cache_warmup()
         
         # 启动后台更新线程（仅在启用时）
         if self.auto_update_config['enabled']:
@@ -277,6 +286,11 @@ class BaseStockServer(ABC):
         self.app.add_url_rule('/api/cache/status', 'get_cache_status', self.get_cache_status, methods=['GET'])
         self.app.add_url_rule('/api/cache/clear', 'clear_cache', self.clear_cache, methods=['POST'])
         
+        # 启动缓存管理路由
+        if hasattr(self, 'startup_cache'):
+            self.app.add_url_rule('/api/startup-cache/status', 'get_startup_cache_status', self.get_startup_cache_status, methods=['GET'])
+            self.app.add_url_rule('/api/startup-cache/clear', 'clear_startup_cache', self.clear_startup_cache, methods=['POST'])
+        
         # 自动更新配置路由
         self.app.add_url_rule('/api/auto-update/config', 'get_auto_update_config', self.get_auto_update_config, methods=['GET'])
         self.app.add_url_rule('/api/auto-update/config', 'update_auto_update_config', self.update_auto_update_config, methods=['PUT'])
@@ -293,6 +307,134 @@ class BaseStockServer(ABC):
         # 兼容旧方法名
         if hasattr(self, 'register_routes') and self.register_routes != self.register_custom_routes:
             self.register_routes()
+    
+    def _schedule_startup_cache_warmup(self):
+        """计划启动缓存预热"""
+        import threading
+        
+        def warmup_startup_cache():
+            time.sleep(5)  # 增加等待时间，确保所有初始化完成
+            self._warmup_startup_cache()
+        
+        warmup_thread = threading.Thread(target=warmup_startup_cache, daemon=True)
+        warmup_thread.start()
+        self.logger.info("📅 已计划启动缓存预热 (5秒后开始)")
+    
+    def trigger_startup_cache_warmup(self):
+        """手动触发启动缓存预热"""
+        import threading
+        
+        def warmup_startup_cache():
+            self._warmup_startup_cache()
+        
+        warmup_thread = threading.Thread(target=warmup_startup_cache, daemon=True)
+        warmup_thread.start()
+        self.logger.info("🔥 手动触发启动缓存预热")
+    
+    def _warmup_startup_cache(self):
+        """预热启动缓存"""
+        try:
+            # 检查是否已经准备好进行缓存预热
+            if not hasattr(self, 'component_manager') or not self.component_manager:
+                self.logger.info("组件管理器尚未初始化，跳过启动缓存预热")
+                return
+            
+            # 获取需要启动时缓存的端点列表
+            startup_endpoints = self._get_startup_cache_endpoints()
+            
+            if not startup_endpoints:
+                self.logger.info("没有配置启动缓存端点")
+                return
+            
+            for endpoint_config in startup_endpoints:
+                try:
+                    self._warmup_single_endpoint(endpoint_config)
+                except Exception as e:
+                    self.logger.warning(f"预热端点失败 {endpoint_config.get('endpoint', 'unknown')}: {e}")
+            
+            stats = self.startup_cache.get_startup_cache_stats()
+            self.logger.info(f"🚀 启动缓存预热完成: {stats['cached_endpoints']} 个端点")
+            
+        except Exception as e:
+            self.logger.error(f"启动缓存预热失败: {e}")
+    
+    def _get_startup_cache_endpoints(self) -> list:
+        """
+        获取需要启动时缓存的端点配置
+        从组件配置中自动读取标记为startup_cache的端点
+        """
+        try:
+            startup_endpoints = []
+            
+            # 尝试获取组件配置
+            if hasattr(self, 'component_manager') and self.component_manager:
+                # 从组件管理器获取配置
+                components = getattr(self.component_manager, 'components', {})
+                
+                for component_id, component_config in components.items():
+                    # 检查组件的缓存配置
+                    extra_config = getattr(component_config, 'extra_config', {})
+                    cache_config = extra_config.get('cache', {})
+                    
+                    # 如果配置了启动缓存
+                    if cache_config.get('strategy') == 'startup_once' or cache_config.get('type') == 'startup_once':
+                        api_path = getattr(component_config, 'api_path', '')
+                        if api_path:
+                            endpoint_config = {
+                                'endpoint': api_path,
+                                'params': cache_config.get('params'),
+                                'description': f"{component_id} - {getattr(component_config, 'title', '未知组件')}"
+                            }
+                            startup_endpoints.append(endpoint_config)
+                            self.logger.info(f"发现启动缓存端点: {api_path}")
+            
+            # 如果没有组件管理器，尝试直接读取配置文件
+            elif hasattr(self, 'get_startup_cache_config'):
+                startup_endpoints = self.get_startup_cache_config()
+            
+            # 默认配置（子类可以重写 get_default_startup_cache_endpoints 方法）
+            elif hasattr(self, 'get_default_startup_cache_endpoints'):
+                startup_endpoints = self.get_default_startup_cache_endpoints()
+            
+            return startup_endpoints
+            
+        except Exception as e:
+            self.logger.warning(f"获取启动缓存端点配置失败: {e}")
+            return []
+    
+    def get_default_startup_cache_endpoints(self) -> list:
+        """
+        获取默认的启动缓存端点配置
+        子类可以重写此方法提供默认配置
+        """
+        return []
+    
+    def _warmup_single_endpoint(self, endpoint_config: dict):
+        """预热单个端点"""
+        endpoint = endpoint_config['endpoint']
+        params = endpoint_config.get('params')
+        
+        self.logger.info(f"🔥 预热端点: {endpoint}")
+        
+        # 检查处理器管理器是否已初始化
+        if hasattr(self, 'processor_manager') and self.processor_manager is None:
+            self.logger.warning(f"处理器管理器尚未初始化，跳过预热: {endpoint}")
+            return
+        
+        # 模拟请求以触发缓存
+        with self.app.test_client() as client:
+            url = endpoint
+            if params:
+                # 构建查询参数
+                if isinstance(params, dict):
+                    query_string = '&'.join([f"{k}={v}" for k, v in params.items()])
+                    url = f"{endpoint}?{query_string}"
+            
+            response = client.get(url)
+            if response.status_code == 200:
+                self.logger.info(f"✅ 预热成功: {endpoint}")
+            else:
+                self.logger.warning(f"❌ 预热失败: {endpoint} - {response.status_code}")
     
     def register_custom_routes(self):
         """子类可以重写此方法注册自定义路由"""
@@ -430,6 +572,55 @@ class BaseStockServer(ABC):
         except Exception as e:
             self.logger.error(f"清理缓存失败: {e}")
             return jsonify({"error": str(e)}), 500
+    
+    # === 启动缓存管理方法 ===
+    
+    def get_startup_cache_status(self):
+        """获取启动缓存状态"""
+        try:
+            if not hasattr(self, 'startup_cache'):
+                return jsonify({
+                    "status": "error",
+                    "message": "启动缓存功能未启用"
+                }), 404
+            
+            stats = self.startup_cache.get_startup_cache_stats()
+            return jsonify({
+                "status": "success",
+                "data": stats,
+                "message": "启动缓存状态获取成功"
+            })
+        except Exception as e:
+            self.logger.error(f"获取启动缓存状态失败: {e}")
+            return jsonify({
+                "status": "error",
+                "error": str(e)
+            }), 500
+    
+    def clear_startup_cache(self):
+        """清除启动缓存"""
+        try:
+            if not hasattr(self, 'startup_cache'):
+                return jsonify({
+                    "status": "error",
+                    "message": "启动缓存功能未启用"
+                }), 404
+            
+            cleared_count = self.startup_cache.clear_startup_cache()
+            message = f"已清除 {cleared_count} 个启动缓存项"
+            self.logger.info(message)
+            
+            return jsonify({
+                "status": "success",
+                "cleared_count": cleared_count,
+                "message": message
+            })
+        except Exception as e:
+            self.logger.error(f"清除启动缓存失败: {e}")
+            return jsonify({
+                "status": "error",
+                "error": str(e)
+            }), 500
     
     # === 自动更新配置管理方法 ===
     

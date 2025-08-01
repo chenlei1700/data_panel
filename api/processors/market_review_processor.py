@@ -18,7 +18,12 @@ import time
 
 class MarketReviewProcessor(BaseDataProcessor):
     """复盘页面数据处理器"""
+    
     def process_market_sentiment_daily(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/market_sentiment_daily', self._original_market_sentiment_daily)
+    
+    def _original_market_sentiment_daily(self):
         """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
         d = FactorIndexDailyData()
         df = d.get_daily_data(start_date='2025-03-01')
@@ -51,6 +56,10 @@ class MarketReviewProcessor(BaseDataProcessor):
         })
     
     def process_market_change_daily(self):
+        """各市场涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/market_change_daily', self._original_market_change_daily)
+    
+    def _original_market_change_daily(self):
         """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
         d = FactorIndexDailyData()
         df = d.get_daily_data(start_date='2025-03-01')
@@ -117,6 +126,10 @@ class MarketReviewProcessor(BaseDataProcessor):
         })
 
     def process_shizhiyu_change_daily(self):
+        """各市值域情绪日数据的平均涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/shizhiyu_change_daily', self._original_shizhiyu_change_daily)
+    
+    def _original_shizhiyu_change_daily(self):
         """各市值域情绪日数据的平均涨幅"""
         d = StockDailyData()
 
@@ -158,6 +171,10 @@ class MarketReviewProcessor(BaseDataProcessor):
         })
 
     def process_lianban_jiji_rate(self):
+        """连板晋级率 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/lianban_jiji_rate', self._original_lianban_jiji_rate)
+    
+    def _original_lianban_jiji_rate(self):
         """连板晋级率"""
         d = StockDailyData()
 
@@ -202,6 +219,10 @@ class MarketReviewProcessor(BaseDataProcessor):
         })
 
     def process_every_lianban_jiji_rate(self):
+        """各连板晋级率 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/every_lianban_jiji_rate', self._original_every_lianban_jiji_rate)
+    
+    def _original_every_lianban_jiji_rate(self):
         """各连板晋级率"""
         # 读取data\kpl_market_sentiment_data.csv的数据
         kpl_data = pd.read_csv('data/kpl_market_sentiment_data.csv', encoding='gbk')
@@ -245,6 +266,10 @@ class MarketReviewProcessor(BaseDataProcessor):
 
 
     def process_sector_line_chart_change(self):
+        """板块涨幅折线图数据 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/sector_line_chart_change', self._original_sector_line_chart_change)
+    
+    def _original_sector_line_chart_change(self):
         """板块涨幅折线图数据"""
         try:
             sector_names = self.server._get_dynamic_titles_list()
@@ -289,6 +314,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取板块涨幅数据失败: {e}")
 
     def process_sector_speed_chart(self):
+        """板块涨速累加图表数据 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/sector_speed_chart', self._original_sector_speed_chart)
+    
+    def _original_sector_speed_chart(self):
         """板块涨速累加图表数据"""
         try:
             self.logger.info("开始处理板块涨速累加图表")
@@ -447,6 +476,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取板块涨速数据失败: {e}")
 
     def process_sector_line_chart_uplimit(self):
+        """板块近似涨停折线图数据 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/sector_line_chart_uplimit', self._original_sector_line_chart_uplimit)
+    
+    def _original_sector_line_chart_uplimit(self):
         """板块近似涨停折线图数据"""
         try:
             sector_names = self.server._get_dynamic_titles_list()
@@ -521,6 +554,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取板块涨停数据失败: {e}")
 
     def process_sector_line_chart_uprate(self):
+        """板块红盘率折线图数据 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/sector_line_chart_uprate', self._original_sector_line_chart_uprate)
+    
+    def _original_sector_line_chart_uprate(self):
         """板块红盘率折线图数据"""
         try:
             sector_names = self.server._get_dynamic_titles_list()
@@ -592,6 +629,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取板块红盘率数据失败: {e}")
 
     def process_sector_line_chart_uprate5(self):
+        """板块uprate5折线图数据 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/sector_line_chart_uprate5', self._original_sector_line_chart_uprate5)
+    
+    def _original_sector_line_chart_uprate5(self):
         """板块uprate5折线图数据"""
         try:
             sector_names = self.server._get_dynamic_titles_list()
@@ -641,6 +682,10 @@ class MarketReviewProcessor(BaseDataProcessor):
     # =========================================================================
     
     def process_plate_info(self):
+        """板块概要数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/plate_info', self._original_plate_info)
+    
+    def _original_plate_info(self):
         """板块概要数据表"""
         try:
             sector_df = self.data_cache.load_data('plate_df')
@@ -674,6 +719,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取板块概要数据失败: {e}")
 
     def process_stocks(self):
+        """股票数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/stocks', self._original_stocks)
+    
+    def _original_stocks(self):
         """股票数据表"""
         try:
             stock_df = self.data_cache.load_data('stock_df')
@@ -709,6 +758,10 @@ class MarketReviewProcessor(BaseDataProcessor):
     # =========================================================================
     
     def process_plate_info_table_data(self):
+        """返回板块概要数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/plate_info_table_data', self._original_plate_info_table_data)
+    
+    def _original_plate_info_table_data(self):
         """返回板块概要数据表"""
         try:
             start_time = time.time()
@@ -823,6 +876,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取板块信息失败: {e}")
 
     def process_stocks_table_data(self):
+        """返回股票数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/stocks_table_data', self._original_stocks_table_data)
+    
+    def _original_stocks_table_data(self):
         """返回股票数据表"""
         try:
             # TODO: 从 table_processor.py 迁移完整实现
@@ -861,6 +918,10 @@ class MarketReviewProcessor(BaseDataProcessor):
         except Exception as e:
             return self.error_response(f"获取股票数据失败: {e}")
     def process_get_up_limit_table_data(self):
+        """返回涨停数据，从固定CSV文件读取 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/get_up_limit_table_data', self._original_get_up_limit_table_data)
+    
+    def _original_get_up_limit_table_data(self):
         """返回涨停数据，从固定CSV文件读取"""
         try:
             # 读取CSV文件（使用固定路径）
@@ -935,6 +996,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return jsonify({"error": str(e)}), 500
         
     def process_up_limit_table_data(self):
+        """返回涨停数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/up_limit_table_data', self._original_up_limit_table_data)
+    
+    def _original_up_limit_table_data(self):
         """返回涨停数据表"""
         # try:
         #     # TODO: 从 table_processor.py 迁移完整实现
@@ -1043,6 +1108,10 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取涨停数据失败: {e}")
 
     def process_up_limit(self):
+        """涨停数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/up_limit', self._original_up_limit)
+    
+    def _original_up_limit(self):
         """涨停数据表"""
         try:
             up_limit_df = self.data_cache.load_data('up_limit_df')
@@ -1149,9 +1218,15 @@ class MarketReviewProcessor(BaseDataProcessor):
 
     def process_all_market_change_distribution(self):
         """
-        获取全市场日线级别各涨幅分布的股票数
+        获取全市场日线级别各涨幅分布的股票数 - 带启动缓存
         横坐标为日期（月/日格式），纵轴为股票个数
         按照y轴从高到低的累计顺序显示：limit_up_count, up5, up0, down0, down5, limit_down_count
+        """
+        return self._process_with_startup_cache('/api/all_market_change_distribution', self._original_all_market_change_distribution)
+    
+    def _original_all_market_change_distribution(self):
+        """
+        获取全市场日线级别各涨幅分布的股票数
         """
         try:
             d = MarketSentimentDailyData()
@@ -1198,6 +1273,14 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
 
     def process_up5_shizhiyu_distribution(self):
+        """
+        获取涨幅大于5的各市值域日线级别的股票数 - 带启动缓存
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：微盘, 小盘, 中盘, 中大盘, 大盘
+        """
+        return self._process_with_startup_cache('/api/up5_shizhiyu_distribution', self._original_up5_shizhiyu_distribution)
+    
+    def _original_up5_shizhiyu_distribution(self):
         """
         获取涨幅大于5的各市值域日线级别的股票数
         横坐标为日期（月/日格式），纵轴为股票个数
@@ -1253,7 +1336,15 @@ class MarketReviewProcessor(BaseDataProcessor):
 
     def process_up5_zhubanyu_distribution(self):
         """
-        获取涨幅大于5的各市值域日线级别的股票数
+        获取涨幅大于5的主板与创业板分布 - 带启动缓存
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：主板, 创业板, 科创版, 北交所+新三板
+        """
+        return self._process_with_startup_cache('/api/up5_zhubanyu_distribution', self._original_up5_zhubanyu_distribution)
+    
+    def _original_up5_zhubanyu_distribution(self):
+        """
+        获取涨幅大于5的主板与创业板分布
         横坐标为日期（月/日格式），纵轴为股票个数
         按照y轴从高到低的累计顺序显示：主板, 创业板, 科创版, 北交所+新三板
         """
@@ -1309,6 +1400,13 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
 
     def process_plate_stock_day_change_distribution(self):
+        """
+        从txt读取文件中的板块名,在csv文件中找到该板块对应的股票id，并获取其日线涨幅数据 - 带启动缓存
+        横坐标为日期（月/日格式），纵轴为各涨幅分布的股票个数
+        """
+        return self._process_with_startup_cache('/api/plate_stock_day_change_distribution', self._original_plate_stock_day_change_distribution)
+    
+    def _original_plate_stock_day_change_distribution(self):
         """
         从txt读取文件中的板块名,在csv文件中找到该板块对应的股票id，并获取其日线涨幅数据
         横坐标为日期（月/日格式），纵轴为各涨幅分布的股票个数
@@ -1378,7 +1476,15 @@ class MarketReviewProcessor(BaseDataProcessor):
         
     def process_up5_fan_sencer_distribution(self):
         """
-        获取涨幅大于5的各市值域日线级别的股票数
+        获取涨幅大于9.7的昨日买入平均涨幅分布 - 带启动缓存
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：主板, 创业板, 科创版, 北交所+新三板
+        """
+        return self._process_with_startup_cache('/api/up5_fan_sencer_distribution', self._original_up5_fan_sencer_distribution)
+    
+    def _original_up5_fan_sencer_distribution(self):
+        """
+        获取涨幅大于9.7的昨日买入平均涨幅分布
         横坐标为日期（月/日格式），纵轴为股票个数
         按照y轴从高到低的累计顺序显示：主板, 创业板, 科创版, 北交所+新三板
         """
@@ -1441,9 +1547,15 @@ class MarketReviewProcessor(BaseDataProcessor):
                 
     def process_chuangye_change_distribution(self):
         """
-        获取创业板日线级别各涨幅分布的股票数
+        获取创业板日线级别各涨幅分布的股票数 - 带启动缓存
         横坐标为日期（月/日格式），纵轴为股票个数
         按照y轴从高到低的累计顺序显示：limit_up_count, up5, up0, down0, down5, limit_down_count
+        """
+        return self._process_with_startup_cache('/api/chuangye_change_distribution', self._original_chuangye_change_distribution)
+    
+    def _original_chuangye_change_distribution(self):
+        """
+        获取创业板日线级别各涨幅分布的股票数
         """
         try:
             d = MarketSentimentDailyData()
@@ -1490,9 +1602,15 @@ class MarketReviewProcessor(BaseDataProcessor):
         
     def process_st_change_distribution(self):
         """
-        获取创业板日线级别各涨幅分布的股票数
+        获取ST股票日线级别各涨幅分布的股票数 - 带启动缓存
         横坐标为日期（月/日格式），纵轴为股票个数
         按照y轴从高到低的累计顺序显示：limit_up_count, up5, up0, down0, down5, limit_down_count
+        """
+        return self._process_with_startup_cache('/api/st_change_distribution', self._original_st_change_distribution)
+    
+    def _original_st_change_distribution(self):
+        """
+        获取ST股票日线级别各涨幅分布的股票数
         """
         try:
             d = MarketSentimentDailyData()
@@ -1539,7 +1657,16 @@ class MarketReviewProcessor(BaseDataProcessor):
             
     def process_today_plate_up_limit_distribution(self):
         """
-        获取今日各板块连板数分布，横轴为板块名称，纵轴为股票个数
+        获取今日各板块连板数分布（板块内股票日线涨幅分布） - 带启动缓存
+        横轴为板块名称，纵轴为股票个数
+        分别用堆积图展示各板块的连板数分布，从下往上为1板，2板，3板等
+        """
+        return self._process_with_startup_cache('/api/today_plate_up_limit_distribution', self._original_today_plate_up_limit_distribution)
+    
+    def _original_today_plate_up_limit_distribution(self):
+        """
+        获取今日各板块连板数分布
+        横轴为板块名称，纵轴为股票个数
         分别用堆积图展示各板块的连板数分布，从下往上为1板，2板，3板等
         """
         try:

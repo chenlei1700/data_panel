@@ -192,7 +192,11 @@
       "description": "各市场成交额",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "marketchange": {
       "component_id": "marketChange",
@@ -209,7 +213,11 @@
       "description": "各市场成交额",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "shizhiyuchange": {
       "component_id": "shizhiyuChange",
@@ -226,7 +234,11 @@
       "description": "各市场成交额",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "upLimitTable": {
       "component_id": "upLimitTable",
@@ -243,7 +255,11 @@
       "description": "涨停数据表",
       "source_data_keys": ["up_limit_df"],
       "source_data_logic": "up_limit_source_data",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     
     "plate_sector": {
@@ -261,7 +277,11 @@
       "description": "今日各板块连板数分布",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     
     "plate_sector_v2": {
@@ -279,7 +299,11 @@
       "description": "今日各板块连板数分布(堆叠面积图)",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     
     "all_market_change_dist": {
@@ -297,7 +321,11 @@
       "description": "今日各市场涨幅分布(堆叠面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "up5_shizhiyu_distribution": {
       "component_id": "up5_shizhiyu_distribution",
@@ -314,7 +342,11 @@
       "description": "涨幅大于5的市值域分布(堆叠面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "up5_zhubanyu_distribution": {
       "component_id": "up5_zhubanyu_distribution",
@@ -331,7 +363,11 @@
       "description": "涨幅大于5的市值域分布(堆叠面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "plate_stock_day_change_distribution": {
       "component_id": "plate_stock_day_change_distribution",
@@ -348,7 +384,11 @@
       "description": "板块内股票日线涨幅分布(面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "up5_fan_sencer_distribution": {
       "component_id": "up5_fan_sencer_distribution",
@@ -365,7 +405,11 @@
       "description": "涨幅大于9.7的市值域分布(堆叠面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "every_lianban_jiji_rate": {
       "component_id": "every_lianban_jiji_rate",
@@ -382,7 +426,11 @@
       "description": "连板晋级率",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "chuangye_change_dist": {
       "component_id": "chuangye_change_dist",
@@ -399,7 +447,11 @@
       "description": "今日各市场涨幅分布(堆叠面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     },
     "st_change_dist": {
       "component_id": "st_change_dist",
@@ -416,7 +468,11 @@
       "description": "今日各市场涨幅分布(堆叠面积图)",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
     }
   },
   "demo": {

@@ -1,6 +1,6 @@
 """
 Author: chenlei  
-Date: 2025-07-26
+Date: 2025-08-02
 Description: 复盘页面股票仪表盘服务 - 基于新框架重构版本
 功能: 提供复盘页面、股票数据展示、实时涨幅分析、涨停监控等功能
 """
@@ -32,7 +32,7 @@ api_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if api_root not in sys.path:
     sys.path.insert(0, api_root)
 
-# 导入新框架基类 - 现在从同级目录导入
+# 导入新框架基类
 from base_server import BaseStockServer
 from conf.server_config import get_server_config, create_auto_update_config
 from processors.processor_factory import create_processor_manager
@@ -83,12 +83,7 @@ class MarketReviewStockServer(BaseStockServer, SourceDataLogicMixin):
         # 使用动态的服务器类型
         self.component_manager = ComponentManager(self, server_type)
         
-        super().__init__(port=port, name=server_name, auto_update_config=auto_update_config)
-        
-        # 服务特定的配置
-        # data_cache已经在基类中通过get_data_cache_file_paths()初始化了
-        # response_cache已经在基类中初始化了，无需重复初始化
-        
+        # 初始化其他必要的属性，在父类初始化之前
         self.selected_sector = "航运概念"
         self.latest_update = {
             "sector": "航运概念",
@@ -98,13 +93,19 @@ class MarketReviewStockServer(BaseStockServer, SourceDataLogicMixin):
         self.sse_clients = []
         self.message_queue = queue.Queue()
         
-        # 初始化股票数据
+        # 预先创建处理器管理器的占位符，避免启动缓存预热时报错
+        self.processor_manager = None
+        
+        # 调用父类初始化（这会创建logger和data_cache，并触发启动缓存预热）
+        super().__init__(port=port, name=server_name, auto_update_config=auto_update_config)
+        
+        # 现在logger和data_cache都可用了，初始化股票数据
         self._init_stock_data()
         
         # 读取自定义板块
         self.my_plate_list = self._get_my_plate()
         
-        # 初始化处理器管理器 - 使用动态的服务器类型
+        # 重新创建处理器管理器，使用正确的data_cache和logger
         self.processor_manager = create_processor_manager(
             server_type=server_type,
             server_instance=self,
@@ -534,13 +535,32 @@ def main():
     print(f"📝 服务器名称: {server.name}")
     print(f"🚫 自动更新: 已禁用")
     
+    # 显示启动缓存配置信息
+    startup_endpoints = server._get_startup_cache_endpoints()
+    print(f"🚀 启动缓存配置: {len(startup_endpoints)} 个端点")
+    for endpoint in startup_endpoints:
+        print(f"   📊 {endpoint.get('description', 'Unknown')} -> {endpoint.get('endpoint', 'Unknown')}")
+    
+    # 调试：显示组件管理器信息
+    if hasattr(server, 'component_manager') and server.component_manager:
+        components = getattr(server.component_manager, 'components', {})
+        print(f"🔧 组件管理器加载了 {len(components)} 个组件")
+        startup_cache_count = 0
+        for comp_id, comp_config in components.items():
+            extra_config = getattr(comp_config, 'extra_config', {})
+            cache_config = extra_config.get('cache', {})
+            if cache_config.get('strategy') == 'startup_once':
+                startup_cache_count += 1
+                print(f"   ✅ {comp_id}: {getattr(comp_config, 'api_path', 'No API path')}")
+        print(f"🎯 发现 {startup_cache_count} 个启动缓存组件")
+
     try:
         # 启动时初始化动态标题
         server._update_dynamic_titles()
         print("✅ 动态标题初始化完成")
     except Exception as e:
         print(f"⚠️ 动态标题初始化失败: {e}")
-    
+     
     server.run(debug=True)
 
 
