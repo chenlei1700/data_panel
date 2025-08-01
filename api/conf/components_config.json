@@ -211,6 +211,23 @@
       "source_data_logic": "",
       "enabled": true
     },
+    "shizhiyuchange": {
+      "component_id": "shizhiyuChange",
+      "component_type": "chart",
+      "title": "各市值域涨幅",
+      "api_path": "/api/shizhiyu_change_daily",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "500px",
+      "description": "各市场成交额",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
     "upLimitTable": {
       "component_id": "upLimitTable",
       "component_type": "table",
@@ -278,6 +295,91 @@
       },
       "height": "900px",
       "description": "今日各市场涨幅分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "up5_shizhiyu_distribution": {
+      "component_id": "up5_shizhiyu_distribution",
+      "component_type": "stackedAreaChart",
+      "title": "涨幅大于5的市值域分布(面积图)",
+      "api_path": "/api/up5_shizhiyu_distribution",
+      "position": {
+        "row": 2,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "900px",
+      "description": "涨幅大于5的市值域分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "up5_zhubanyu_distribution": {
+      "component_id": "up5_zhubanyu_distribution",
+      "component_type": "stackedAreaChart",
+      "title": "涨幅大于5的主板与创业板分布(面积图)",
+      "api_path": "/api/up5_zhubanyu_distribution",
+      "position": {
+        "row": 3,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "900px",
+      "description": "涨幅大于5的市值域分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "plate_stock_day_change_distribution": {
+      "component_id": "plate_stock_day_change_distribution",
+      "component_type": "stackedAreaChart",
+      "title": "板块内股票日线涨幅分布(面积图)",
+      "api_path": "/api/plate_stock_day_change_distribution",
+      "position": {
+        "row": 4,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "1300px",
+      "description": "板块内股票日线涨幅分布(面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "up5_fan_sencer_distribution": {
+      "component_id": "up5_fan_sencer_distribution",
+      "component_type": "stackedAreaChart",
+      "title": "涨幅大于9.7的昨日买入平均涨幅(面积图)",
+      "api_path": "/api/up5_fan_sencer_distribution",
+      "position": {
+        "row": 4,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "1200px",
+      "description": "涨幅大于9.7的市值域分布(堆叠面积图)",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "every_lianban_jiji_rate": {
+      "component_id": "every_lianban_jiji_rate",
+      "component_type": "chart",
+      "title": "连板晋级率",
+      "api_path": "/api/every_lianban_jiji_rate",
+      "position": {
+        "row": 5,
+        "col": 2,
+        "rowSpan": 1,
+        "colSpan": 2
+      },
+      "height": "600px",
+      "description": "连板晋级率",
       "source_data_keys": [],
       "source_data_logic": "",
       "enabled": true

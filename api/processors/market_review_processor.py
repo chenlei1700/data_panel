@@ -4,9 +4,11 @@ Author: Auto-generated
 Date: 2025-07-26
 Description: 复盘页面
 """
+import os
 from stock_data.factor.index.daily import FactorIndexDailyData
 from stock_data.sentiment.market.daily import MarketSentimentDailyData
 from stock_data.stock.index_daily import IndexDailyData
+from stock_data.stock.stock_daily import StockDailyData
 from .base_processor import BaseDataProcessor
 from flask import jsonify, request
 import pandas as pd
@@ -80,6 +82,168 @@ class MarketReviewProcessor(BaseDataProcessor):
                 "legend": {"title": "市场名称"}
             }
         })
+    
+    def process_market_change_daily(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板涨幅"""
+        d = FactorIndexDailyData()
+        df = d.get_daily_data(start_date='2025-03-01')
+        # 成交额amount变为以亿为单位，并保留2位小数
+       
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        market_list = ['主板', '创业板', 'ST','全市场']
+        # 对name列groupby，计算change列的cumsum
+        df['change'] = df.groupby('name')['change'].cumsum()
+        chart_data = []
+        for market in market_list:
+            market_data = df[df['name'] == market]
+            if not market_data.empty:
+                market_data = market_data.sort_values(by='trade_date')
+                chart_data.append({
+                    "name": f'{market}涨幅',
+                    "x": market_data['date_str'].tolist(),
+                    "y": market_data['change'].tolist()
+                })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "各市场成交额",
+                "xaxis": {"title": "时间"},
+                "yaxis": {"title": "成交额(亿元)"},
+                "legend": {"title": "市场名称"}
+            }
+        })
+
+    def process_shizhiyu_change_daily(self):
+        """各市值域情绪日数据的平均涨幅"""
+        d = StockDailyData()
+
+        df = d.get_daily_data(start_date='2025-07-01')
+       
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        # 新建一列‘市值域’，按照total_mv列的值进行分类，分类规则为
+        # 0-20亿：微盘 20-50亿：小盘 50-100亿：中盘 100亿-300亿：中大盘，300亿以上：大盘
+        df['市值域'] = pd.cut(df['total_mv'], bins=[0, 20e8, 50e8, 100e8, 300e8, float('inf')],
+                           labels=['微盘', '小盘', '中盘', '中大盘', '大盘'])
+        # 按trade_date和市值域分组，计算change列的平均值
+        df['day_change'] = df.groupby(['trade_date', '市值域'])['change'].transform('mean')
+        # 每天的市值域各取1个，去掉重复的市值域
+        df_temp = df.drop_duplicates(subset=['trade_date', '市值域'])
+        # 按市值域分组，计算每个市值域的cumsum
+        df_temp['cumsum_change'] = df_temp.groupby('市值域')['day_change'].cumsum()
+        market_list = ['微盘', '小盘', '中盘', '中大盘', '大盘']
+        chart_data = []
+        for market in market_list:
+            market_data = df_temp[df_temp['市值域'] == market]
+            if not market_data.empty:
+                market_data = market_data.sort_values(by='trade_date')
+                chart_data.append({
+                    "name": f'{market}涨幅',
+                    "x": market_data['date_str'].tolist(),
+                    "y": market_data['cumsum_change'].tolist()
+                })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "市值域日线涨幅",
+                "xaxis": {"title": "时间"},
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "市场名称"}
+            }
+        })
+
+    def process_lianban_jiji_rate(self):
+        """连板晋级率"""
+        d = StockDailyData()
+
+        df = d.get_daily_data(start_date='2025-03-01')
+       
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        # 新建一列‘市值域’，按照total_mv列的值进行分类，分类规则为
+        # 0-20亿：微盘 20-50亿：小盘 50-100亿：中盘 100亿-300亿：中大盘，300亿以上：大盘
+        df['next_day_change'] = df.groupby('id')['change'].shift(-1)  # 获取下一天的涨跌幅
+        # 因为shift了-1，所以需要groupby后去掉最后一行
+        df = df[df['next_day_change'].notna()]
+        df = df[df['change']>=9.7]
+        
+        # 先计算每个交易日的涨停晋级率
+        daily_stats = df.groupby('trade_date')['next_day_change'].agg([
+            ('total_count', 'count'),
+            ('upgrade_count', lambda x: (x >= 9.7).sum())
+        ]).reset_index()
+        daily_stats['涨停晋级率'] = daily_stats['upgrade_count'] / daily_stats['total_count']
+        
+        # 添加date_str列
+        daily_stats['date_str'] = pd.to_datetime(daily_stats['trade_date']).dt.strftime('%m/%d')
+        
+        df = daily_stats[['trade_date', 'date_str', '涨停晋级率']]
+        chart_data = []
+        chart_data.append({
+            "name": f'涨停晋级率',
+            "x": df['date_str'].tolist(),
+            "y": df['涨停晋级率'].tolist()
+        })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "市值域日线涨幅",
+                "xaxis": {"title": "时间"},
+                "yaxis": {"title": "涨停晋级率(%)"},
+                "legend": {"title": "涨停晋级率"}
+            }
+        })
+
+    def process_every_lianban_jiji_rate(self):
+        """各连板晋级率"""
+        # 读取data\kpl_market_sentiment_data.csv的数据
+        kpl_data = pd.read_csv('data/kpl_market_sentiment_data.csv', encoding='gbk')
+        kpl_data['trade_date'] = pd.to_datetime(kpl_data['trade_date'], errors='coerce')
+        # 升序排列
+        kpl_data = kpl_data.sort_values(by='trade_date').reset_index(drop=True)
+        # 取最新的100天数据
+        kpl_data = kpl_data.tail(100)
+        kpl_data['date_str'] = kpl_data['trade_date'].dt.strftime('%m/%d')
+        # rename up_limit_2_rate：2连板晋级率，up_limit_3_rate：3连板晋级率，up_limit_4_rate：4连板晋级率
+        kpl_data = kpl_data.rename(columns={
+            'up_limit_2_rate': '1进2晋级率',
+            'up_limit_3_rate': '2进3晋级率',
+            'up_limit_high_rate': '3板以上晋级率'
+        })
+        
+        chart_data = []
+        for column in ['1进2晋级率', '2进3晋级率', '3板以上晋级率']:
+            if column in kpl_data.columns:
+                chart_data.append({
+                    "name": column,
+                    "x": kpl_data['trade_date'].dt.strftime('%Y-%m-%d').tolist(),  # 使用完整日期格式
+                    "y": kpl_data[column].tolist()
+                })
+       
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "各连板晋级率",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "date",  # 指定x轴为日期类型
+                    "tickformat": "%m/%d"  # 显示格式仍为月/日
+                },
+                "yaxis": {"title": "涨停晋级率(%)"},
+                "legend": {"title": "涨停晋级率"}
+            }
+        })
+
+
     def process_sector_line_chart_change(self):
         """板块涨幅折线图数据"""
         try:
@@ -949,13 +1113,13 @@ class MarketReviewProcessor(BaseDataProcessor):
                     value = int(row[column]) if pd.notna(row[column]) else 0
                     
                     row_data[key] = value
-                    row_hover[key] = [f"{value}只"]
+                    row_hover[key] = [f"{value}"]
                 
                 data[x_value] = row_data
                 
                 # 计算总数
                 total = sum(row_data.values())
-                table_data[x_value] = f"{total}只"
+                table_data[x_value] = f"{total}"
                 hover_data[x_value] = row_hover
             
             # 定义显示顺序和颜色
@@ -1033,6 +1197,248 @@ class MarketReviewProcessor(BaseDataProcessor):
         except Exception as e:
             return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
 
+    def process_up5_shizhiyu_distribution(self):
+        """
+        获取涨幅大于5的各市值域日线级别的股票数
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：微盘, 小盘, 中盘, 中大盘, 大盘
+        """
+        try:
+            d = StockDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+            
+            df['市值域'] = pd.cut(df['total_mv'], bins=[0, 20e8, 50e8, 100e8, 300e8, float('inf')],
+                           labels=['微盘', '小盘', '中盘', '中大盘', '大盘'])
+            df = df[df['change']>=5]  # 去掉没有市值域的行
+            # 按trade_date和市值域分组，计算个数
+            df['day_count'] = df.groupby(['trade_date', '市值域'])['change'].transform('count')
+            # 每天的市值域各取1个，去掉重复的市值域
+            df_temp = df.drop_duplicates(subset=['trade_date', '市值域'])
+            # 将市值域列内的值作为列名，pivot表格
+            df_pivot = df_temp.pivot(index='date_str', columns='市值域', values='day_count').fillna(0).reset_index()
+            # 将'微盘', '小盘', '中盘', '中大盘', '大盘'各列的值变为百分比，分母为每行的总和
+            df_pivot['总数'] = df_pivot[['微盘', '小盘', '中盘', '中大盘', '大盘']].sum(axis=1)
+            df_pivot[['微盘', '小盘', '中盘', '中大盘', '大盘']] = df_pivot[['微盘', '小盘', '中盘', '中大盘', '大盘']].div(df_pivot['总数'], axis=0) * 100 
+            df_pivot = df_pivot.drop(columns=['总数'])
+            # 计算'微盘', '小盘', '中盘', '中大盘', '大盘'各列的percentchange
+            market_cap_columns = ['微盘', '小盘', '中盘', '中大盘', '大盘']
+            
+        
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "微盘", "column": "微盘"},
+                {"key": "小盘", "column": "小盘"},
+                {"key": "中盘", "column": "中盘"},
+                {"key": "中大盘", "column": "中大盘"},
+                {"key": "大盘", "column": "大盘"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', '#FFA07A', '#FF6B6B', '#FF0000']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df_pivot, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
+
+    def process_up5_zhubanyu_distribution(self):
+        """
+        获取涨幅大于5的各市值域日线级别的股票数
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：主板, 创业板, 科创版, 北交所+新三板
+        """
+        try:
+            d = StockDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+
+            df['市值域'] = pd.cut(df['id'], bins=[0, 300000, 400000, 499999, 680000, 800000, float('inf')],
+                           labels=['主板1', '创业板', '新三板', '主板2', '科创版', '北交所'])
+            df = df[df['change']>=5]  # 去掉没有市值域的行
+            # 按trade_date和市值域分组，计算个数
+            df['day_count'] = df.groupby(['trade_date', '市值域'])['change'].transform('count')
+            
+
+            # 每天的市值域各取1个，去掉重复的市值域
+            df_temp = df.drop_duplicates(subset=['trade_date', '市值域'])
+            # 将市值域列内的值作为列名，pivot表格
+            df_pivot = df_temp.pivot(index='date_str', columns='市值域', values='day_count').fillna(0).reset_index()
+            # 将'主板', '创业板', '科创版', '新三板+北交所'各列的值变为百分比，分母为每行的总和
+            df_pivot['总数'] = df_pivot[['主板1', '创业板', '新三板', '主板2', '科创版', '北交所']].sum(axis=1)
+            df_pivot['主板'] = df_pivot['主板1'] + df_pivot['主板2']  # 合并主板1和主板2
+            df_pivot = df_pivot.drop(columns=['主板1', '主板2'])  # 删除合并后的列
+            df_pivot['新三板+北交所'] = df_pivot['新三板'] + df_pivot['北交所']  # 合并新三板和北交所
+            df_pivot = df_pivot.drop(columns=['新三板', '北交所'])  # 删除合并后的列
+            df_pivot[['主板', '创业板', '科创版', '新三板+北交所']] = df_pivot[['主板', '创业板', '科创版', '新三板+北交所']].div(df_pivot['总数'], axis=0) * 100
+            df_pivot = df_pivot.drop(columns=['总数'])
+            
+        
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "主板", "column": "主板"},
+                {"key": "创业板", "column": "创业板"},
+                {"key": "科创版", "column": "科创版"},
+                {"key": "新三板+北交所", "column": "新三板+北交所"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', '#FFA07A', '#FF6B6B', '#FF0000']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df_pivot, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
+
+    def process_plate_stock_day_change_distribution(self):
+        """
+        从txt读取文件中的板块名,在csv文件中找到该板块对应的股票id，并获取其日线涨幅数据
+        横坐标为日期（月/日格式），纵轴为各涨幅分布的股票个数
+        """
+        try:
+            # 获取data\plate_name.txt中的板块名
+            plate_name_file = r'data\plate_name.txt'
+            if not os.path.exists(plate_name_file):
+                return self.error_response("板块名文件不存在，请先创建 data/plate_name.txt 文件")
+            with open(plate_name_file, 'r', encoding='utf-8') as f:
+                sector_name = f.read().strip()
+            
+            # 读取strategy\strategy001\data\all_sectors_stock_level.csv中的数据
+            all_sectors_stock_df = pd.read_csv(r'strategy\strategy001\data\all_sectors_stock_level.csv')
+            # 获取Sector列中包含sector_name的行的id列的list
+            sector_ids = all_sectors_stock_df[all_sectors_stock_df['Sector'].str.contains(sector_name, na=False)]['id'].tolist()
+            
+            # 读取股票日线数据
+            d = StockDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df = df[df['id'].isin(sector_ids)]
+
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+
+            # 获取最近20日的行
+            df = df[df['trade_date'] >= (df['trade_date'].max() - pd.Timedelta(days=20))]
+            # 创建涨幅域列
+            df['涨幅域'] = pd.cut(df['change'], bins=[float('-inf'), -9.7, -5, -2, 0, 2, 5, 9.7, float('inf')],
+                           labels=['c_inf_c-10', 'c-10_c-5', 'c-5_c-2', 'c-2_c0', 'c0_c2', 'c2_c5', 'c5_c10', 'c10_c_inf'])
+
+            # 按trade_date和涨幅域分组，计算个数
+            df['day_count'] = df.groupby(['trade_date', '涨幅域'])['change'].transform('count')
+
+            # 每天的涨幅域各取1个，去掉重复的涨幅域
+            df_temp = df.drop_duplicates(subset=['trade_date', '涨幅域'])
+            # 将涨幅域列内的值作为列名，pivot表格
+            df_pivot = df_temp.pivot(index='date_str', columns='涨幅域', values='day_count').fillna(0).reset_index()
+        
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "c_inf_c-10", "column": "c_inf_c-10"},
+                {"key": "c-10_c-5", "column": "c-10_c-5"},
+                {"key": "c-5_c-2", "column": "c-5_c-2"},
+                {"key": "c-2_c0", "column": "c-2_c0"},
+                {"key": "c0_c2", "column": "c0_c2"},
+                {"key": "c2_c5", "column": "c2_c5"},
+                {"key": "c5_c10", "column": "c5_c10"},
+                {"key": "c10_c_inf", "column": "c10_c_inf"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', "#697472", '#FF6B6B', '#FF0000', '#9932CC', '#FF69B4']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df_pivot, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
+        
+    def process_up5_fan_sencer_distribution(self):
+        """
+        获取涨幅大于5的各市值域日线级别的股票数
+        横坐标为日期（月/日格式），纵轴为股票个数
+        按照y轴从高到低的累计顺序显示：主板, 创业板, 科创版, 北交所+新三板
+        """
+        try:
+            d = StockDailyData()
+            df = d.get_daily_data(start_date='2025-03-01')
+            
+            df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+            df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+            df['next_day_change'] = df.groupby('id')['change'].shift(-1)  # 获取下一天的涨跌幅
+            # 因为shift了-1，所以需要groupby后去掉最后一行
+            df = df[df['next_day_change'].notna()]
+            df = df[df['change']>=9.7] 
+            # 去除open， close, high, low为相同值的行
+            df = df[(df['open'] != df['close']) | (df['open'] != df['high']) | (df['open'] != df['low'])]
+            
+            df['涨幅域'] = pd.cut(df['next_day_change'], bins=[float('-inf'), -9.7, -5, -2, 0, 2, 5, 9.7, float('inf')],
+                           labels=['c_inf_c-10', 'c-10_c-5', 'c-5_c-2', 'c-2_c0', 'c0_c2', 'c2_c5', 'c5_c10', 'c10_c_inf'])
+           
+            # 按trade_date和市值域分组，计算个数
+            df['day_count'] = df.groupby(['trade_date', '涨幅域'])['change'].transform('count')
+
+            # 每天的涨幅域各取1个，去掉重复的涨幅域
+            df_temp = df.drop_duplicates(subset=['trade_date', '涨幅域'])
+
+            # 将涨幅域列内的值作为列名，pivot表格
+            df_pivot = df_temp.pivot(index='date_str', columns='涨幅域', values='day_count').fillna(0).reset_index()
+            # 将'主板', '创业板', '科创版', '新三板+北交所'各列的值变为百分比，分母为每行的总和
+            df_pivot['总数'] = df_pivot[['c_inf_c-10', 'c-10_c-5', 'c-5_c-2', 'c-2_c0', 'c0_c2', 'c2_c5', 'c5_c10', 'c10_c_inf']].sum(axis=1)
+            df_pivot[['c_inf_c-10', 'c-10_c-5', 'c-5_c-2', 'c-2_c0', 'c0_c2', 'c2_c5', 'c5_c10', 'c10_c_inf']] = df_pivot[['c_inf_c-10', 'c-10_c-5', 'c-5_c-2', 'c-2_c0', 'c0_c2', 'c2_c5', 'c5_c10', 'c10_c_inf']].div(df_pivot['总数'], axis=0) * 100
+            df_pivot = df_pivot.drop(columns=['总数'])
+            
+        
+            # 定义数据列配置（按照从下到上的堆叠顺序）
+            data_columns_config = [
+                {"key": "c_inf_c-10", "column": "c_inf_c-10"},
+                {"key": "c-10_c-5", "column": "c-10_c-5"},
+                {"key": "c-5_c-2", "column": "c-5_c-2"},
+                {"key": "c-2_c0", "column": "c-2_c0"},
+                {"key": "c0_c2", "column": "c0_c2"},
+                {"key": "c2_c5", "column": "c2_c5"},
+                {"key": "c5_c10", "column": "c5_c10"},
+                {"key": "c10_c_inf", "column": "c10_c_inf"},
+            ]
+            
+            # 定义颜色（从下到上：跌停到涨停）
+            colors = ['#00008B', '#4169E1', '#87CEEB', "#697472", '#FF6B6B', '#FF0000', '#9932CC', '#FF69B4']
+            
+            # 使用通用函数构建数据
+            result = self.build_stacked_area_data(df_pivot, 'date_str', data_columns_config, colors)
+            
+            if result is None:
+                return self.error_response("构建堆叠面积图数据失败")
+            
+            # 构建返回数据
+            return jsonify(result)
+            
+        except Exception as e:
+            return self.error_response(f"获取全市场涨跌幅分布失败: {e}")
+                
     def process_chuangye_change_distribution(self):
         """
         获取创业板日线级别各涨幅分布的股票数
