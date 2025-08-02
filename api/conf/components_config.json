@@ -231,7 +231,7 @@
       },
       "板块分析": {
         "order": 4,
-        "components": ["plate_sector", "plate_sector_v2"],
+        "components": ["plate_sector", "plate_sector_v2", "upLimitStocksReview"],
         "icon": "🏢",
         "collapsible": true,
         "description": "板块连板分布分析"
@@ -328,7 +328,27 @@
         "description": "只在服务器启动时计算一次"
       }
     },
-    
+    "upLimitStocksReview": {
+      "component_id": "upLimitStocksReview",
+      "component_type": "table",
+      "title": "涨停股票复盘",
+      "api_path": "/api/up_limit_stocks_review",
+      "position": {
+        "row": 8,
+        "col": 0,
+        "rowSpan": 4,
+        "colSpan": 5
+      },
+      "height": "4000px",
+      "description": "涨停股票复盘",
+      "source_data_keys": [""],
+      "source_data_logic": "",
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
+    },
     "plate_sector": {
       "component_id": "plate_sector",
       "component_type": "chart",

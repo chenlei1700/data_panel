@@ -6,6 +6,7 @@ Description: 复盘页面
 """
 import os
 from stock_data.factor.index.daily import FactorIndexDailyData
+from stock_data.kpl.up_limit import KplUpLimitData
 from stock_data.sentiment.market.daily import MarketSentimentDailyData
 from stock_data.stock.index_daily import IndexDailyData
 from stock_data.stock.stock_daily import StockDailyData
@@ -1107,6 +1108,75 @@ class MarketReviewProcessor(BaseDataProcessor):
         except Exception as e:
             return self.error_response(f"获取涨停数据失败: {e}")
 
+    def process_up_limit_stocks_review(self):
+        """返回涨停数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/up_limit_stocks_review', self._original_up_limit_stocks_review)
+
+    def _original_up_limit_stocks_review(self):
+        """返回涨停数据表"""
+        
+        try:
+            d = KplUpLimitData()
+            up_limit_df = d.get_daily_data(start_date='2025-07-01')
+            
+            if up_limit_df.empty:
+                return jsonify({
+                    "columns": [],
+                    "rows": [],
+                    "message": "涨停数据文件读取失败"
+                })
+            
+            # 获取最新的日期的行
+            up_limit_df['trade_date'] = pd.to_datetime(up_limit_df['trade_date'])
+            up_limit_df = up_limit_df[up_limit_df['trade_date'].dt.date == up_limit_df['trade_date'].dt.date.max()]
+            # 将trade_date改为月日的格式
+            up_limit_df['trade_date'] = up_limit_df['trade_date'].dt.strftime('%m-%d')
+            # 将up_limit_amount，famc列转换为亿元为单位
+            up_limit_df['up_limit_amount'] = up_limit_df['up_limit_amount'] / 1e8
+            up_limit_df['famc'] = up_limit_df['famc'] / 1e8
+            # 需要重新计算，继续执行原有逻辑
+            # 定义表格列 - 根据实际CSV文件的列名
+            columns = [
+                {"field": "trade_date", "header": "时间"},
+                {"field": "stock_name", "header": "股票名称"},
+                {"field": "up_limit_reason", "header": "涨停原因"},
+                {"field": "sector", "header": "板块"},  
+                {"field": "up_limit_strength", "header": "涨停强度"},
+                {"field": "up_limit_amount", "header": "封单金额", "backgroundColor": "redGreen"},
+                {"field": "day_up_limit_count", "header": "涨停日数", "backgroundColor": "redGreen"},
+                {"field": "up_limit_count", "header": "涨停次数", "backgroundColor": "redGreen"},
+                {"field": "famc", "header": "流通市值", "backgroundColor": "redGreen"},
+                {"field": "intro", "header": "公司介绍"},
+                {"field": "id", "header": "股票ID", "visible": False},
+            ]
+            
+            valid_columns = [col for col in columns if col["field"] in up_limit_df.columns]
+            
+            rows = []
+            for _, row_data in up_limit_df.iterrows():
+                row = {}
+                for col in valid_columns:
+                    field = col["field"]
+                    value = row_data[field]
+                    
+                    if isinstance(value, (float, np.float64, np.float32)):
+                        value = round(value, 2)
+                    
+                    row[field] = value
+                
+                rows.append(row)
+            
+            # 构建响应数据
+            response_data = jsonify({
+                "columns": valid_columns,
+                "rows": rows
+            })
+            
+            return response_data
+        
+        except Exception as e:
+            return self.error_response(f"获取涨停数据失败: {e}")
+        
     def process_up_limit(self):
         """涨停数据表 - 带启动缓存"""
         return self._process_with_startup_cache('/api/up_limit', self._original_up_limit)
