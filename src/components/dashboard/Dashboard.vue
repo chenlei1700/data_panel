@@ -55,6 +55,7 @@
               :key="component.id"
               class="grid-cell"
               :style="getCellStyle(component)"
+              :data-component-id="component.component_id || component.id"
             >
               <div class="component-card">
                 <div class="component-body" :class="`component-type-${component.type}`">
@@ -72,6 +73,18 @@
           />
         </div>
       </div>
+      
+      <!-- 悬浮导航器 -->
+      <floating-navigator
+        v-if="!loading && !error && navigatorConfig && navigatorConfig.enabled"
+        :components="layout.components"
+        :config="navigatorConfig"
+        :organization-config="getNavigatorOrganization()"
+        :page-key="getApiServiceName()"
+        :visible="showNavigator"
+        @component-click="handleNavigatorComponentClick"
+        @visibility-change="handleNavigatorVisibilityChange"
+      />
     </div>
   </div>
 </template>
@@ -81,6 +94,7 @@ import { defineComponent, ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'; // 导入useRoute
 import ComponentRenderer from './ComponentRenderer.vue';
 import DashboardConfigEditor from './DashboardConfigEditor.vue';
+import FloatingNavigator from '../floating-navigator/FloatingNavigator.vue';
 import axios from 'axios';
 import { getApiEndpoint, getApiUrl, getServiceInfo } from '@/config/api.js'; // 导入API配置函数
 
@@ -88,7 +102,8 @@ export default defineComponent({
   name: 'Dashboard',
   components: {
     ComponentRenderer,
-    DashboardConfigEditor
+    DashboardConfigEditor,
+    FloatingNavigator
   },  setup() {
     const route = useRoute(); // 获取当前路由
     const loading = ref(true);
@@ -98,6 +113,8 @@ export default defineComponent({
       components: []
     });
     const showConfigEditor = ref(false);
+    const navigatorConfig = ref(null);
+    const showNavigator = ref(true);
     const error = ref(null);  // 错误状态
     const retryCount = ref(0);  // 重试计数
     const maxRetries = 5;  // 增加最大重试次数
@@ -191,7 +208,61 @@ export default defineComponent({
         const processingStartTime = performance.now();
         console.log(`⏱️ [${new Date().toISOString()}] 开始处理配置数据`);
         
-        layout.value = response.data.layout;
+        // 处理layout数据并去重组件
+        const layoutData = response.data.layout;
+        if (layoutData && layoutData.components) {
+          console.log('🔍 原始组件列表:', layoutData.components.map(c => ({
+            id: c.component_id || c.id,
+            title: c.title,
+            type: c.type
+          })))
+          
+          // 去重组件：根据component_id去重，保留第一个
+          const seenIds = new Set();
+          const uniqueComponents = [];
+          
+          layoutData.components.forEach(component => {
+            const componentId = component.component_id || component.id;
+            if (!seenIds.has(componentId)) {
+              seenIds.add(componentId);
+              uniqueComponents.push(component);
+            } else {
+              console.warn(`🔍 发现重复组件配置，已忽略: ${componentId}`);
+            }
+          });
+          
+          layoutData.components = uniqueComponents;
+          console.log(`🔍 组件去重完成，原始: ${response.data.layout.components.length}，去重后: ${uniqueComponents.length}`);
+          console.log('🔍 去重后组件列表:', uniqueComponents.map(c => ({
+            id: c.component_id || c.id,
+            title: c.title,
+            type: c.type
+          })))
+        }
+        
+        layout.value = layoutData;
+        
+        console.log('🔍 后端响应数据结构:', {
+          hasFloatingNavigator: !!response.data.floating_navigator,
+          hasLayoutNavigatorOrganization: !!(response.data.layout?.navigator_organization),
+          floatingNavigator: response.data.floating_navigator,
+          layoutNavigatorOrganization: response.data.layout?.navigator_organization
+        });
+        
+        // 加载悬浮导航器配置
+        if (response.data.floating_navigator) {
+          navigatorConfig.value = {
+            ...response.data.floating_navigator,
+            navigator_organization: response.data.layout?.navigator_organization || {}
+          };
+          console.log(`🧭 导航器配置加载成功:`, navigatorConfig.value);
+        } else {
+          console.log(`🧭 未找到导航器配置，使用默认配置`);
+          navigatorConfig.value = {
+            ...getDefaultNavigatorConfig(),
+            navigator_organization: response.data.layout?.navigator_organization || {}
+          };
+        }
         
         // 更新组件数据源URL为正确的服务地址
         layout.value.components.forEach(component => {
@@ -600,7 +671,89 @@ export default defineComponent({
       // 重置状态
       isConnected.value = false;
       isReconnecting.value = false;
-    });return {
+    });
+    
+    // 获取默认导航器配置
+    const getDefaultNavigatorConfig = () => {
+      return {
+        enabled: true,
+        default_position: { x: 20, y: 100 },
+        default_opacity: 0.9,
+        default_size: { width: 320, height: 450 },
+        organization_structure: {},
+        uncategorized_section: {
+          title: '其他组件',
+          icon: '📦',
+          order: 99,
+          collapsible: true,
+          description: '未分类的组件'
+        },
+        settings: {
+          enable_search: true,
+          enable_tooltips: true,
+          enable_keyboard_shortcuts: true,
+          auto_collapse_categories: false,
+          remember_user_preferences: true
+        }
+      };
+    };
+    
+    // 处理导航器组件点击
+    const handleNavigatorComponentClick = (component) => {
+      console.log(`🧭 导航器组件点击:`, component);
+      // 可以在这里添加额外的处理逻辑，比如高亮组件等
+    };
+    
+    // 处理导航器可见性变化
+    const handleNavigatorVisibilityChange = (visible) => {
+      showNavigator.value = visible;
+      console.log(`🧭 导航器可见性变化:`, visible);
+    };
+    
+    // 切换导航器显示/隐藏
+    const toggleNavigator = () => {
+      showNavigator.value = !showNavigator.value;
+    };
+    
+    // 获取导航器组织结构配置
+    const getNavigatorOrganization = () => {
+      const serviceName = getApiServiceName();
+      const fullConfig = navigatorConfig.value || {};
+      
+      console.log('🗂️ 获取导航组织配置:', {
+        serviceName,
+        hasNavigatorConfig: !!navigatorConfig.value,
+        hasNavigatorOrganization: !!(fullConfig.navigator_organization),
+        navigatorOrganization: fullConfig.navigator_organization,
+        navigatorOrganizationKeys: Object.keys(fullConfig.navigator_organization || {}),
+        fullConfig: fullConfig
+      });
+      
+      // 查找页面特定的组织结构
+      if (fullConfig.navigator_organization) {
+        const result = {
+          categories: Object.keys(fullConfig.navigator_organization).map(categoryName => {
+            const categoryConfig = fullConfig.navigator_organization[categoryName];
+            return {
+              name: categoryName,
+              icon: categoryConfig.icon || '📂',
+              order: categoryConfig.order || 0,
+              components: categoryConfig.components || [],
+              collapsible: categoryConfig.collapsible !== false,
+              description: categoryConfig.description || '',
+              color: categoryConfig.color
+            };
+          }).sort((a, b) => a.order - b.order)
+        };
+        
+        console.log('🗂️ 生成的导航分类配置:', result);
+        return result;
+      }
+      
+      return { categories: [] };
+    };
+    
+    return {
       loading,
       layout,
       showConfigEditor,
@@ -610,10 +763,21 @@ export default defineComponent({
       isConnected,     // 连接状态
       isReconnecting,  // 重连状态
       connectionStatusText, // 连接状态文本
+      
+      // 导航器相关
+      navigatorConfig,
+      showNavigator,
+      handleNavigatorComponentClick,
+      handleNavigatorVisibilityChange,
+      toggleNavigator,
+      getNavigatorOrganization,  // 新增导航器组织结构配置
+      
       gridStyle,
       getCellStyle,
-      toggleConfigEditor,      updateLayout,
+      toggleConfigEditor,
+      updateLayout,
       getDashboardTitle,
+      getApiServiceName,   // 添加缺失的函数
       retryLoadConfig,  // 重试函数
       forceReconnect    // 强制重连函数
     };
@@ -903,3 +1067,6 @@ export default defineComponent({
   }
 }
 </style>
+
+<!-- 导入悬浮导航器样式 -->
+<style src="@/assets/styles/floating-navigator/floating-navigator.scss" lang="scss"></style>

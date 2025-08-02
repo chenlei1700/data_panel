@@ -1,0 +1,358 @@
+/**
+ * 悬浮导航器主样式文件
+ */
+
+/* CSS变量定义 */
+:root {
+  /* 颜色 */
+  --navigator-primary-color: #667eea;
+  --navigator-primary-hover: #5a6fd8;
+  --navigator-secondary-color: #764ba2;
+  --navigator-background: rgba(255, 255, 255, 0.95);
+  --navigator-border: rgba(255, 255, 255, 0.3);
+  --navigator-text: #333333;
+  --navigator-text-secondary: #666666;
+  --navigator-text-muted: #999999;
+  
+  /* 尺寸 */
+  --navigator-border-radius: 12px;
+  --navigator-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --navigator-backdrop-filter: blur(10px);
+  
+  /* 动画 */
+  --navigator-transition: all 0.2s ease;
+  --navigator-animation-duration: 300ms;
+  
+  /* Z-index */
+  --navigator-z-index: 9999;
+  --navigator-tooltip-z-index: 10000;
+}
+
+/* 暗色主题变量 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --navigator-background: rgba(30, 30, 30, 0.95);
+    --navigator-border: rgba(255, 255, 255, 0.1);
+    --navigator-text: #ffffff;
+    --navigator-text-secondary: #a0aec0;
+    --navigator-text-muted: #718096;
+  }
+}
+
+/* 通用重置 */
+.floating-navigator *,
+.floating-navigator *::before,
+.floating-navigator *::after {
+  box-sizing: border-box;
+}
+
+/* 高亮动画 */
+@keyframes navigator-highlight {
+  0% {
+    background-color: rgba(102, 126, 234, 0.3);
+    border-color: var(--navigator-primary-color);
+  }
+  50% {
+    background-color: rgba(102, 126, 234, 0.1);
+    border-color: var(--navigator-primary-hover);
+  }
+  100% {
+    background-color: transparent;
+    border-color: transparent;
+  }
+}
+
+@keyframes navigator-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes navigator-bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -2px, 0);
+  }
+  70% {
+    transform: translate3d(0, -1px, 0);
+  }
+  90% {
+    transform: translate3d(0, -0.5px, 0);
+  }
+}
+
+@keyframes navigator-slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes navigator-slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes navigator-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes navigator-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* 全局高亮类 */
+.navigator-highlight {
+  animation: navigator-highlight 2s ease-in-out;
+  border: 2px solid var(--navigator-primary-color) !important;
+  border-radius: 8px !important;
+  position: relative;
+}
+
+.navigator-highlight::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: linear-gradient(45deg, 
+    var(--navigator-primary-color), 
+    var(--navigator-secondary-color),
+    var(--navigator-primary-color)
+  );
+  border-radius: 12px;
+  opacity: 0.3;
+  z-index: -1;
+  animation: navigator-pulse 1s ease-in-out 3;
+}
+
+/* 滚动条样式 */
+.floating-navigator ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.floating-navigator ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.floating-navigator ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.floating-navigator ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Firefox 滚动条 */
+.floating-navigator * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+/* 工具提示通用样式 */
+.navigator-tooltip {
+  position: absolute;
+  z-index: var(--navigator-tooltip-z-index);
+  background: rgba(30, 30, 30, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: all 0.2s ease;
+}
+
+.navigator-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.navigator-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border: 5px solid transparent;
+  border-top-color: rgba(30, 30, 30, 0.95);
+}
+
+/* 响应式断点 */
+@media (max-width: 1200px) {
+  .floating-navigator {
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .floating-navigator {
+    max-width: 260px;
+    font-size: 11px;
+  }
+  
+  .navigator-tooltip {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    top: auto;
+    bottom: 10px;
+    white-space: normal;
+    max-width: none;
+  }
+  
+  .navigator-tooltip::after {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .floating-navigator {
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  :root {
+    --navigator-border-radius: 8px;
+    --navigator-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+  
+  .floating-navigator {
+    border: 2px solid var(--navigator-primary-color);
+  }
+  
+  .navigator-highlight {
+    border-width: 3px !important;
+  }
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --navigator-transition: none;
+    --navigator-animation-duration: 0ms;
+  }
+  
+  .navigator-highlight {
+    animation: none;
+    border: 2px solid var(--navigator-primary-color) !important;
+  }
+  
+  .navigator-highlight::after {
+    animation: none;
+  }
+  
+  .navigator-tooltip {
+    transition: none;
+  }
+  
+  * {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .floating-navigator {
+    display: none !important;
+  }
+}
+
+/* 焦点可见性 */
+.floating-navigator *:focus-visible {
+  outline: 2px solid var(--navigator-primary-color);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 选择文本样式 */
+.floating-navigator ::selection {
+  background: var(--navigator-primary-color);
+  color: white;
+}
+
+.floating-navigator ::-moz-selection {
+  background: var(--navigator-primary-color);
+  color: white;
+}
+
+/* 禁用状态 */
+.floating-navigator .disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* 加载状态 */
+.floating-navigator .loading {
+  pointer-events: none;
+}
+
+.floating-navigator .loading * {
+  cursor: wait;
+}
+
+/* 错误状态 */
+.floating-navigator .error {
+  border-left: 3px solid #e53e3e;
+  background: rgba(229, 62, 62, 0.05);
+}
+
+/* 成功状态 */
+.floating-navigator .success {
+  border-left: 3px solid #38a169;
+  background: rgba(56, 161, 105, 0.05);
+}
+
+/* 警告状态 */
+.floating-navigator .warning {
+  border-left: 3px solid #d69e2e;
+  background: rgba(214, 158, 46, 0.05);
+}
+
+/* 信息状态 */
+.floating-navigator .info {
+  border-left: 3px solid #3182ce;
+  background: rgba(49, 130, 206, 0.05);
+}

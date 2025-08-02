@@ -22,11 +22,11 @@ const routes = [
   },
   {
     path: '/multiplate',
-    name: 'stacked_area_demo',
+    name: 'multiplate',
     component: StockDashboard,
     meta: {
       title: '多板块组件演示',
-      apiService: 'stacked_area_demo'  // 对应API配置中的键名，使用端口5007
+      apiService: 'multiplate'  // 对应API配置中的键名和components_config.json中的配置
     }
   },
   {

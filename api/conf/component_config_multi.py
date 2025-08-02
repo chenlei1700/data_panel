@@ -112,10 +112,32 @@ class ComponentConfigLoader:
             # 将 JSON 数据转换为 ComponentConfig 对象
             configs = {}
             for server_type, components in json_data.items():
+                # 跳过全局配置（如floating_navigator）
+                if server_type == 'floating_navigator':
+                    continue
+                    
                 configs[server_type] = {}
                 for comp_id, comp_data in components.items():
-                    # 创建 ComponentConfig 对象
-                    configs[server_type][comp_id] = ComponentConfig(**comp_data)
+                    # 跳过非组件配置（如navigator_organization）
+                    if comp_id == 'navigator_organization':
+                        continue
+                    
+                    # 确保comp_data是字典并且包含必要的字段
+                    if not isinstance(comp_data, dict):
+                        continue
+                        
+                    # 检查必要的字段是否存在
+                    required_fields = ['component_id', 'component_type', 'title', 'api_path']
+                    if not all(field in comp_data for field in required_fields):
+                        print(f"Warning: 组件 {comp_id} 缺少必要字段，跳过")
+                        continue
+                    
+                    try:
+                        # 创建 ComponentConfig 对象
+                        configs[server_type][comp_id] = ComponentConfig(**comp_data)
+                    except Exception as e:
+                        print(f"Warning: 创建组件配置 {comp_id} 失败: {e}")
+                        continue
             
             self._components_configs = configs
             return configs
@@ -236,6 +258,16 @@ class ComponentManager:
         self.server_type = server_type
         self.components = COMPONENTS_CONFIGS.get(server_type, {})
         
+        # 加载完整的JSON配置以获取navigator_organization
+        config_loader = ComponentConfigLoader()
+        try:
+            with open(config_loader.config_path, 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+                self.navigator_organization = json_data.get(server_type, {}).get('navigator_organization', {})
+        except Exception as e:
+            print(f"Warning: 加载navigator_organization失败: {e}")
+            self.navigator_organization = {}
+        
     def get_dashboard_config(self) -> Dict[str, Any]:
         """生成仪表盘配置"""
         components = []
@@ -254,7 +286,8 @@ class ComponentManager:
             "layout": {
                 "rows": 10,
                 "cols": 5,
-                "components": components
+                "components": components,
+                "navigator_organization": self.navigator_organization
             }
         }
     

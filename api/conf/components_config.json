@@ -1,5 +1,35 @@
 {
   "multiplate": {
+    "navigator_organization": {
+      "图表分析": {
+        "order": 1,
+        "components": ["chart1", "chart2", "chart3", "chart4", "chart_speed"],
+        "icon": "📊",
+        "collapsible": true,
+        "description": "各类数据图表和趋势分析"
+      },
+      "数据表格": {
+        "order": 2,
+        "components": ["table1", "table12"],
+        "icon": "📋",
+        "collapsible": true,
+        "description": "数据表格和详细信息"
+      },
+      "涨停分析": {
+        "order": 3,
+        "components": ["upLimitTable"],
+        "icon": "🚀",
+        "collapsible": true,
+        "description": "涨停板相关数据分析"
+      },
+      "板块分布": {
+        "order": 4,
+        "components": ["plate_sector", "plate_sector_v2"],
+        "icon": "🏢",
+        "collapsible": true,
+        "description": "板块分布和连板统计"
+      }
+    },
     "chart1": {
       "component_id": "chart1",
       "component_type": "chart",
@@ -177,6 +207,43 @@
     }
   },
   "market_review": {
+    "navigator_organization": {
+      "市场分析": {
+        "order": 1,
+        "components": ["marketAmount", "marketchange", "shizhiyuchange"],
+        "icon": "💹",
+        "collapsible": true,
+        "description": "市场整体分析和成交数据"
+      },
+      "分布统计": {
+        "order": 2,
+        "components": ["all_market_change_dist", "up5_shizhiyu_distribution", "up5_zhubanyu_distribution", "plate_stock_day_change_distribution", "up5_fan_sencer_distribution", "chuangye_change_dist", "st_change_dist"],
+        "icon": "📈",
+        "collapsible": true,
+        "description": "各类涨幅和分布统计图表"
+      },
+      "涨停数据": {
+        "order": 3,
+        "components": ["upLimitTable"],
+        "icon": "🚀",
+        "collapsible": true,
+        "description": "涨停板相关数据"
+      },
+      "板块分析": {
+        "order": 4,
+        "components": ["plate_sector", "plate_sector_v2"],
+        "icon": "🏢",
+        "collapsible": true,
+        "description": "板块连板分布分析"
+      },
+      "连板分析": {
+        "order": 5,
+        "components": ["every_lianban_jiji_rate"],
+        "icon": "🔗",
+        "collapsible": true,
+        "description": "连板晋级率分析"
+      }
+    },
     "marketAmount": {
       "component_id": "marketAmount",
       "component_type": "chart",
@@ -199,7 +266,7 @@
       }
     },
     "marketchange": {
-      "component_id": "marketChange",
+      "component_id": "marketchange",
       "component_type": "chart",
       "title": "各市场涨幅",
       "api_path": "/api/market_change_daily",
@@ -220,7 +287,7 @@
       }
     },
     "shizhiyuchange": {
-      "component_id": "shizhiyuChange",
+      "component_id": "shizhiyuchange",
       "component_type": "chart",
       "title": "各市值域涨幅",
       "api_path": "/api/shizhiyu_change_daily",
@@ -476,6 +543,15 @@
     }
   },
   "demo": {
+    "navigator_organization": {
+      "示例组件": {
+        "order": 1,
+        "components": ["simple_chart", "basic_table"],
+        "icon": "🧪",
+        "collapsible": true,
+        "description": "演示用的简单组件"
+      }
+    },
     "simple_chart": {
       "component_id": "simple_chart",
       "component_type": "chart",
@@ -512,6 +588,22 @@
   },
   
   "strong": {
+    "navigator_organization": {
+      "强势分析": {
+        "order": 1,
+        "components": ["strong_chart"],
+        "icon": "💪",
+        "collapsible": true,
+        "description": "强势股票分析图表"
+      },
+      "涨停数据": {
+        "order": 2,
+        "components": ["upLimitTable"],
+        "icon": "🚀",
+        "collapsible": true,
+        "description": "涨停板数据表格"
+      }
+    },
     "strong_chart": {
       "component_id": "strong_chart",
       "component_type": "chart",
@@ -545,6 +637,49 @@
       "source_data_keys": ["up_limit_df"],
       "source_data_logic": "up_limit_source_data",
       "enabled": true
+    }
+  },
+  
+  "floating_navigator": {
+    "enabled": true,
+    "default_position": {
+      "x": 3424,
+      "y": 1338
+    },
+    "default_opacity": 0.9,
+    "default_size": {
+      "width": 320,
+      "height": 450
+    },
+    "uncategorized_section": {
+      "title": "其他组件",
+      "icon": "📦",
+      "order": 99,
+      "collapsible": true,
+      "description": "未分类的组件"
+    },
+    "settings": {
+      "enable_search": true,
+      "enable_tooltips": true,
+      "enable_keyboard_shortcuts": true,
+      "auto_collapse_categories": false,
+      "remember_user_preferences": true,
+      "animation_duration": 300,
+      "highlight_duration": 2000
+    },
+    "themes": {
+      "default": {
+        "background_color": "rgba(255, 255, 255, 0.95)",
+        "header_gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "text_color": "#333333",
+        "border_color": "rgba(255, 255, 255, 0.3)"
+      },
+      "dark": {
+        "background_color": "rgba(30, 30, 30, 0.95)",
+        "header_gradient": "linear-gradient(135deg, #4a5568 0%, #2d3748 100%)",
+        "text_color": "#ffffff",
+        "border_color": "rgba(255, 255, 255, 0.1)"
+      }
     }
   }
 }
