@@ -328,6 +328,90 @@
         "description": "只在服务器启动时计算一次"
       }
     },
+    "market_stocks_change": {
+      "component_id": "market_stocks_change",
+      "component_type": "chart",
+      "title": "全市场涨幅大于3的股票日内涨幅",
+      "api_path": "/api/market_stocks_change_daily",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 6
+      },
+      "height": "3000px",
+      "description": "全市场涨幅大于5的股票日内涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
+    },
+    "market_stocks_change_uplimit": {
+      "component_id": "market_stocks_change_uplimit",
+      "component_type": "chart",
+      "title": "全市场涨幅大于9.7的股票日内涨幅",
+      "api_path": "/api/market_stocks_change_daily_uplimit",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 6
+      },
+      "height": "3000px",
+      "description": "全市场涨幅大于9.7的股票日内涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
+    },
+    "market_stocks_change_daily_speed": {
+      "component_id": "market_stocks_change_daily_speed",
+      "component_type": "chart",
+      "title": "全市场5分涨速大于3的股票日内涨幅",
+      "api_path": "/api/market_stocks_change_daily_speed",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 6
+      },
+      "height": "3000px",
+      "description": "市场5分涨速大于3的股票日内涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
+    },
+    "plate_stocks_change_daily": {
+      "component_id": "plate_stocks_change_daily",
+      "component_type": "chart",
+      "title": "板块内股票日线涨幅",
+      "api_path": "/api/plate_stocks_change_daily",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 6
+      },
+      "height": "3000px",
+      "description": "板块内股票日线涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
+    },
     "upLimitTable": {
       "component_id": "upLimitTable",
       "component_type": "table",

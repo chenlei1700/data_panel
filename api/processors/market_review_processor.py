@@ -10,8 +10,10 @@ from stock_data.kpl.up_limit import KplUpLimitData
 from stock_data.sentiment.market.daily import MarketSentimentDailyData
 from stock_data.stock.index_daily import IndexDailyData
 from stock_data.stock.stock_daily import StockDailyData
+from stock_data.stock_minute import StockMinuteData
+from stock_data.ths.concept_data import ThsConceptData
 from stock_data.ths.concept_index import ThsConceptIndexData
-from utils.common import get_trade_date_by_offset
+from utils.common import get_trade_date_by_offset, get_trade_date_list
 from .base_processor import BaseDataProcessor
 from flask import jsonify, request
 import pandas as pd
@@ -89,6 +91,90 @@ class MarketReviewProcessor(BaseDataProcessor):
             "data": chart_data,
             "layout": {
                 "title": "各市场成交额",
+                "xaxis": {"title": "时间"},
+                "yaxis": {"title": "成交额(亿元)"},
+                "legend": {"title": "市场名称"}
+            }
+        })
+    
+    def process_plate_stocks_change_daily(self):
+        """各板块股票涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/plate_stocks_change_daily', self._original_plate_stocks_change_daily)
+    
+    def _original_plate_stocks_change_daily(self):
+        """各板块股票涨幅"""
+        d = ThsConceptIndexData()
+        df = d.get_daily_data(start_date='2025-07-01')
+
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        #获取最新日期
+        latest_date = df['trade_date'].max()
+        latest_date_str = latest_date.strftime('%Y%m%d')
+        start_date_str = get_trade_date_by_offset(latest_date_str, 20)
+        # 将字符串日期转换为datetime类型以便比较
+        start_date = pd.to_datetime(start_date_str, format='%Y%m%d')
+        # 获取从start_date到latest_date的所有数据
+        df = df[(df['trade_date'] >= start_date) & (df['trade_date'] <= latest_date)]
+
+        
+        #获取近5日，近10日，近20日的cumsum各排名前10的板块列表
+        ranking_results = self.get_sector_rankings_by_period(df, latest_date_str, [5, 10, 20], 10)
+        
+
+        # 获取ranking_results的列表，并在df中筛选出这些板块
+        sector_names = [item['sector_name'] for sublist in ranking_results.values() for item in sublist]
+        # 去除重复的板块名称
+        sector_names = list(set(sector_names))
+        
+        # 获取日线股票数据
+        d = StockDailyData()
+        stock_df = d.get_daily_data(start_date='2025-07-01')
+        stock_df['trade_date'] = pd.to_datetime(stock_df['trade_date'], errors='coerce')
+        # 获取板块内股票列表
+        d = ThsConceptData()
+        concept_df = d.get_daily_data(start_date='2025-07-01')
+        # 获取最新交易日数据
+        latest_date = concept_df['trade_date'].max()
+        concept_df = concept_df[concept_df['trade_date'] == latest_date]
+        sector_name=sector_names[0]
+        # 获取股票列表
+        stock_list = concept_df[concept_df['concept_name'] == sector_name]['stocks'].values[0].split(',')
+        # 并变成整数型
+        stock_list = [int(stock) for stock in stock_list if stock.isdigit()]
+        # 获取stock_df中id在stock_list中的数据
+        stock_df = stock_df[stock_df['id'].isin(stock_list)]
+        # groupby id，计算change列的cumsum
+        stock_df['change'] = stock_df.groupby('id')['change'].cumsum()
+        stock_df['date_str'] = stock_df['trade_date'].dt.strftime('%m/%d')
+        chart_data = []
+        for stock_id in stock_list:
+            stock_data = stock_df[stock_df['id'] == stock_id]
+            if not stock_data.empty:
+                stock_data = stock_data.sort_values(by='trade_date')
+                # 获取股票名称 - 取第一行的值
+                stock_name = stock_data['stock_name'].iloc[0]
+                
+                x_data = stock_data['date_str'].tolist()
+                y_data = stock_data['change'].tolist()
+                
+                chart_data.append({
+                    "name": f'{stock_name}——{sector_name}',
+                    "x": x_data,
+                    "y": y_data,
+                    "mode": "lines+markers+text",  # 添加 +text 模式
+                    "line": {"width": 2},
+                    "text": [f'{stock_name}——{sector_name}' if i == len(x_data)-1 else '' for i in range(len(x_data))],
+                    "textposition": "middle right",
+                    "textfont": {"size": 25, "color": "black"},
+                    "showlegend": True
+                })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "板块内股票涨幅",
                 "xaxis": {"title": "时间"},
                 "yaxis": {"title": "成交额(亿元)"},
                 "legend": {"title": "市场名称"}
@@ -213,7 +299,244 @@ class MarketReviewProcessor(BaseDataProcessor):
                 "total_dates": len(all_dates)
             }
         })
+    
+    def process_market_stocks_change_daily(self):
+        """各板块涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/market_stocks_change_daily', self._original_market_stocks_change_daily)
 
+    def _original_market_stocks_change_daily(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
+        d = StockMinuteData()
+        # 获取最新交易日数据
+        trade_date_list = get_trade_date_list()
+        latest_date = trade_date_list[-1] 
+        latest_date = '20250807' # chen for test
+        df = d.get_minute_data_by_date(start_date=latest_date)
+
+        df['time'] = pd.to_datetime(df['time'], errors='coerce')
+        # 去除09:30之前的数据
+        df = df[df['time'].dt.strftime('%H:%M') >= '09:30']
+        df['time_str'] = df['time'].dt.strftime('%H:%M')
+        # 如果pre_close列没有值或为0，填充pre_close列的值为1
+        df['pre_close'] = df['pre_close'].replace(0, 1)
+        # fillna pre_close with 1 if it is NaN
+        df['pre_close'] = df['pre_close'].fillna(1)
+        # 按id groupby,新增列change，计算close列对pre_close列的百分比变化，并乘以100后保留2位小数
+        df['change'] = ((df['close'] - df['pre_close']) / df['pre_close'] * 100).round(2)
+        # 选出15:00时刻的change列涨幅大于5的id的list，并去重
+        tempdf = df[df['time_str'] == '15:00']
+        # 去除change<-31,>31的数据
+        tempdf = tempdf[(tempdf['change'] > -31) & (tempdf['change'] < 31)]
+        top_stocks = tempdf[tempdf['change'] > 5]['id'].unique().tolist()
+        # 选出change列涨幅小于-4的id的list，并去重
+        bottom_stocks = tempdf[tempdf['change'] < -5]['id'].unique().tolist()
+        # 合并两个列表
+        all_stocks = list(set(top_stocks + bottom_stocks))
+        chart_data = []
+        for stock in all_stocks:
+            stock_data = df[df['id'] == stock]
+            if not stock_data.empty:
+                stock_data = stock_data.sort_values(by='time')
+                
+                # 获取x轴和y轴数据
+                x_data = stock_data['time_str'].tolist()
+                y_data = stock_data['change'].tolist()
+                
+                # 添加完整的日期信息以确保排序正确
+                date_info = stock_data[['time_str', 'trade_date']].to_dict('records')
+                
+                # 方案2：只显示有数据的日期（真实数据，不填充）
+                chart_data.append({
+                    "name": f'{stock}涨幅',
+                    "x": x_data,
+                    "y": y_data,
+                    "dates": [d['time_str'] for d in date_info],  # 添加完整日期用于排序
+                    "mode": "lines+markers"  # 明确指定线条模式
+                })
+        
+        # 获取完整的日期范围用于调试
+        all_dates = sorted(df['time_str'].unique())
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "板块涨幅",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",  # 强制按分类排序，不自动重排
+                    "categoryorder": "array",  # 使用数组顺序
+                    "categoryarray": all_dates  # 指定x轴的顺序
+                },
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "板块名称"}
+            },
+            "debug_info": {
+                "total_series": len(chart_data),
+                "date_range": f"{all_dates[0]} 到 {all_dates[-1]}",
+                "total_dates": len(all_dates)
+            }
+        })
+
+    def process_market_stocks_change_daily_uplimit(self):
+        """各板块涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/market_stocks_change_daily_uplimit', self._original_market_stocks_change_daily_uplimit)
+
+
+    def _original_market_stocks_change_daily_uplimit(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
+        d = StockMinuteData()
+        # 获取最新交易日数据
+        trade_date_list = get_trade_date_list()
+        latest_date = trade_date_list[-1] 
+        latest_date = '20250807' # chen for test
+        df = d.get_minute_data_by_date(start_date=latest_date)
+
+        df['time'] = pd.to_datetime(df['time'], errors='coerce')
+        # 去除09:30之前的数据
+        df = df[df['time'].dt.strftime('%H:%M') >= '09:30']
+        df['time_str'] = df['time'].dt.strftime('%H:%M')
+        # 如果pre_close列没有值或为0，填充pre_close列的值为1
+        df['pre_close'] = df['pre_close'].replace(0, 1)
+        # fillna pre_close with 1 if it is NaN
+        df['pre_close'] = df['pre_close'].fillna(1)
+        # 按id groupby,新增列change，计算close列对pre_close列的百分比变化，并乘以100后保留2位小数
+        df['change'] = ((df['close'] - df['pre_close']) / df['pre_close'] * 100).round(2)
+        # 选出15:00时刻的change列涨幅大于5的id的list，并去重
+        tempdf = df[df['time_str'] == '15:00']
+        # 去除change<-31,>31的数据
+        tempdf = tempdf[(tempdf['change'] > -31) & (tempdf['change'] < 31)]
+        top_stocks = tempdf[tempdf['change'] > 9.7]['id'].unique().tolist()
+        # 选出change列涨幅小于-4的id的list，并去重
+        bottom_stocks = tempdf[tempdf['change'] < -9.7]['id'].unique().tolist()
+        # 合并两个列表
+        all_stocks = list(set(top_stocks + bottom_stocks))
+        chart_data = []
+        for stock in all_stocks:
+            stock_data = df[df['id'] == stock]
+            if not stock_data.empty:
+                stock_data = stock_data.sort_values(by='time')
+                
+                # 获取x轴和y轴数据
+                x_data = stock_data['time_str'].tolist()
+                y_data = stock_data['change'].tolist()
+                
+                # 添加完整的日期信息以确保排序正确
+                date_info = stock_data[['time_str', 'trade_date']].to_dict('records')
+                
+                # 方案2：只显示有数据的日期（真实数据，不填充）
+                chart_data.append({
+                    "name": f'{stock}涨幅',
+                    "x": x_data,
+                    "y": y_data,
+                    "dates": [d['time_str'] for d in date_info],  # 添加完整日期用于排序
+                    "mode": "lines+markers"  # 明确指定线条模式
+                })
+        
+        # 获取完整的日期范围用于调试
+        all_dates = sorted(df['time_str'].unique())
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "板块涨幅",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",  # 强制按分类排序，不自动重排
+                    "categoryorder": "array",  # 使用数组顺序
+                    "categoryarray": all_dates  # 指定x轴的顺序
+                },
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "板块名称"}
+            },
+            "debug_info": {
+                "total_series": len(chart_data),
+                "date_range": f"{all_dates[0]} 到 {all_dates[-1]}",
+                "total_dates": len(all_dates)
+            }
+        })
+
+    def process_market_stocks_change_daily_speed(self):
+        """各板块涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/market_stocks_change_daily_speed', self._original_market_stocks_change_daily_speed)
+
+
+    def _original_market_stocks_change_daily_speed(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
+        d = StockMinuteData()
+        # 获取最新交易日数据
+        trade_date_list = get_trade_date_list()
+        latest_date = trade_date_list[-1] 
+        latest_date = '20250807' # chen for test
+        df = d.get_minute_data_by_date(start_date=latest_date)
+
+        df['time'] = pd.to_datetime(df['time'], errors='coerce')
+        # 去除09:30之前的数据
+        df = df[df['time'].dt.strftime('%H:%M') >= '09:30']
+        df['time_str'] = df['time'].dt.strftime('%H:%M')
+        # 如果pre_close列没有值或为0，填充pre_close列的值为1
+        df['pre_close'] = df['pre_close'].replace(0, 1)
+        # fillna pre_close with 1 if it is NaN
+        df['pre_close'] = df['pre_close'].fillna(1)
+        # 按id groupby,新增列change，计算close列对pre_close列的百分比变化，并乘以100后保留2位小数
+        df['change'] = ((df['close'] - df['pre_close']) / df['pre_close'] * 100).round(2)
+        # 获取5分涨速
+        df['speed5'] = df.groupby('id')['change'].diff(5).fillna(0)
+        # 选出15:00时刻的change列涨幅大于5的id的list，并去重
+        tempdf = df.copy()
+        # 去除change<-31,>31的数据
+        tempdf = tempdf[(tempdf['change'] > -31) & (tempdf['change'] < 31)]
+        top_stocks = tempdf[tempdf['speed5'] > 5]['id'].unique().tolist()
+        # 选出change列涨幅小于-4的id的list，并去重
+       
+        all_stocks = list(set(top_stocks))
+        chart_data = []
+        for stock in all_stocks:
+            stock_data = df[df['id'] == stock]
+            # 过滤掉异常数据点，但保留正常数据
+            stock_data = stock_data[(stock_data['change'] >= -31) & (stock_data['change'] <= 31)]
+            
+            if not stock_data.empty:  # 如果过滤后还有数据
+                stock_data = stock_data.sort_values(by='time')
+                
+                # 获取x轴和y轴数据
+                x_data = stock_data['time_str'].tolist()
+                y_data = stock_data['change'].tolist()
+                
+                # 添加完整的日期信息以确保排序正确
+                date_info = stock_data[['time_str', 'trade_date']].to_dict('records')
+                
+                # 方案2：只显示有数据的日期（真实数据，不填充）
+                chart_data.append({
+                    "name": f'{stock}涨幅',
+                    "x": x_data,
+                    "y": y_data,
+                    "dates": [d['time_str'] for d in date_info],  # 添加完整日期用于排序
+                    "mode": "lines+markers"  # 明确指定线条模式
+                })
+        
+        # 获取完整的日期范围用于调试
+        all_dates = sorted(df['time_str'].unique())
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": "板块涨幅",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",  # 强制按分类排序，不自动重排
+                    "categoryorder": "array",  # 使用数组顺序
+                    "categoryarray": all_dates  # 指定x轴的顺序
+                },
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "板块名称"}
+            },
+            "debug_info": {
+                "total_series": len(chart_data),
+                "date_range": f"{all_dates[0]} 到 {all_dates[-1]}",
+                "total_dates": len(all_dates)
+            }
+        })
+    
     def process_shizhiyu_change_daily(self):
         """各市值域情绪日数据的平均涨幅 - 带启动缓存"""
         return self._process_with_startup_cache('/api/shizhiyu_change_daily', self._original_shizhiyu_change_daily)
