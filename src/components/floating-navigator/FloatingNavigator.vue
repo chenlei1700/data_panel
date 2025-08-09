@@ -730,12 +730,14 @@ export default {
 
     // 键盘快捷键
     const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === 'f') {
-        e.preventDefault()
-        if (searchRef.value) {
-          searchRef.value.focus()
-        }
-      } else if (e.key === 'Escape') {
+      // 注释掉 Ctrl+F 处理，让浏览器原生搜索功能正常工作
+      // if (e.ctrlKey && e.key === 'f') {
+      //   e.preventDefault()
+      //   if (searchRef.value) {
+      //     searchRef.value.focus()
+      //   }
+      // } else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         if (showSettings.value) {
           showSettings.value = false
         } else if (searchTerm.value) {

@@ -146,7 +146,7 @@ class MarketReviewStockServer(BaseStockServer, SourceDataLogicMixin):
         try:
             self.stock_daily_ins = StockDailyData()
             today = datetime.datetime.now().strftime("%Y%m%d")
-            today = '20250530'  # for test
+            # today = '20250530'  # for test
             yesterday = get_trade_date_by_offset(today, 1)
             self.stock_daily_df = self.stock_daily_ins.get_daily_data(
                 start_date=yesterday, end_date=yesterday

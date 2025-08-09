@@ -10,6 +10,8 @@ from stock_data.kpl.up_limit import KplUpLimitData
 from stock_data.sentiment.market.daily import MarketSentimentDailyData
 from stock_data.stock.index_daily import IndexDailyData
 from stock_data.stock.stock_daily import StockDailyData
+from stock_data.ths.concept_index import ThsConceptIndexData
+from utils.common import get_trade_date_by_offset
 from .base_processor import BaseDataProcessor
 from flask import jsonify, request
 import pandas as pd
@@ -93,36 +95,122 @@ class MarketReviewProcessor(BaseDataProcessor):
             }
         })
     
-    def process_market_change_daily(self):
-        """市场情绪日数据的主板，创业板，科创版，ST板涨幅"""
-        d = FactorIndexDailyData()
-        df = d.get_daily_data(start_date='2025-03-01')
-        # 成交额amount变为以亿为单位，并保留2位小数
-       
+    def process_plate_change_daily(self):
+        """各板块涨幅 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/plate_change_daily', self._original_plate_change_daily)
+
+    def _original_plate_change_daily(self):
+        """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
+        d = ThsConceptIndexData()
+        df = d.get_daily_data(start_date='2025-07-01')
+
         df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
         df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
-        market_list = ['主板', '创业板', 'ST','全市场']
-        # 对name列groupby，计算change列的cumsum
+        #获取最新日期
+        latest_date = df['trade_date'].max()
+        latest_date_str = latest_date.strftime('%Y%m%d')
+        start_date_str = get_trade_date_by_offset(latest_date_str, 20)
+        # 将字符串日期转换为datetime类型以便比较
+        start_date = pd.to_datetime(start_date_str, format='%Y%m%d')
+        # 获取从start_date到latest_date的所有数据
+        df = df[(df['trade_date'] >= start_date) & (df['trade_date'] <= latest_date)]
+
+        
+        #获取近5日，近10日，近20日的cumsum各排名前10的板块列表
+        ranking_results = self.get_sector_rankings_by_period(df, latest_date_str, [5, 10, 20], 10)
+        
+        print(f"📊 板块排名统计:")
+        for period_key in ranking_results:
+            if ranking_results[period_key]:  # 确保有数据
+                top_3_names = [item['sector_name'] for item in ranking_results[period_key][:3]]
+                print(f"   {period_key}前3: {top_3_names}")
+
+        # 获取ranking_results的列表，并在df中筛选出这些板块
+        sector_names = [item['sector_name'] for sublist in ranking_results.values() for item in sublist]
+        # 去除重复的板块名称
+        sector_names = list(set(sector_names))
+        
+        print(f"🔍 筛选前数据范围: {df['date_str'].min()} 到 {df['date_str'].max()}")
+        print(f"🔍 筛选前总板块数: {df['name'].nunique()}")
+        print(f"🔍 排名板块数: {len(sector_names)}")
+        
+        df = df[df['name'].isin(sector_names)]
+        
+        print(f"🔍 筛选后数据范围: {df['date_str'].min()} 到 {df['date_str'].max()}")
+        print(f"🔍 筛选后总记录数: {len(df)}")
+        
+        # 检查每个板块的数据范围
+        for sector in sector_names[:3]:  # 只检查前3个
+            sector_data = df[df['name'] == sector]
+            if not sector_data.empty:
+                print(f"🔍 板块 '{sector}' 数据范围: {sector_data['date_str'].min()} 到 {sector_data['date_str'].max()}")
+        
+        # groupby name，计算change列的cumsum
         df['change'] = df.groupby('name')['change'].cumsum()
+
+        
         chart_data = []
-        for market in market_list:
-            market_data = df[df['name'] == market]
-            if not market_data.empty:
-                market_data = market_data.sort_values(by='trade_date')
+        
+        # 获取完整的日期范围用于调试
+        all_dates = sorted(df['date_str'].unique())
+        print(f"📅 完整日期范围: {all_dates}")
+        
+        for sector in sector_names:
+            sector_data = df[df['name'] == sector]
+            if not sector_data.empty:
+                sector_data = sector_data.sort_values(by='trade_date')
+                
+                # 获取x轴和y轴数据
+                x_data = sector_data['date_str'].tolist()
+                y_data = sector_data['change'].tolist()
+                
+                # 添加完整的日期信息以确保排序正确
+                date_info = sector_data[['date_str', 'trade_date']].to_dict('records')
+                
+                # 方案2：只显示有数据的日期（真实数据，不填充）
                 chart_data.append({
-                    "name": f'{market}涨幅',
-                    "x": market_data['date_str'].tolist(),
-                    "y": market_data['change'].tolist()
+                    "name": f'{sector}涨幅',
+                    "x": x_data,
+                    "y": y_data,
+                    "dates": [d['trade_date'].strftime('%Y-%m-%d') for d in date_info],  # 添加完整日期用于排序
+                    "mode": "lines+markers"  # 明确指定线条模式
                 })
+                
+                print(f"📊 板块 '{sector}': 数据范围 {sector_data['date_str'].min()} 到 {sector_data['date_str'].max()}, 共{len(sector_data)}天")
+                
+                # 详细检查前几个板块的x轴数据顺序
+                if sector in sector_names[:2]:  # 只检查前2个板块
+                    print(f"🔍 板块 '{sector}' x轴数据顺序: {x_data}")
+                    print(f"🔍 板块 '{sector}' 前5个y值: {y_data[:5]}")
+        
+        # 检查总的chart_data结构
+        print(f"📈 生成图表数据: 共{len(chart_data)}个系列")
+        if chart_data:
+            first_series = chart_data[0]
+            print(f"🔍 第一个系列 '{first_series['name']}' x轴: {first_series['x']}")
+        
+        
+        
+        
         
         return jsonify({
             "chartType": "line",
             "data": chart_data,
             "layout": {
-                "title": "各市场成交额",
-                "xaxis": {"title": "时间"},
-                "yaxis": {"title": "成交额(亿元)"},
-                "legend": {"title": "市场名称"}
+                "title": "板块涨幅",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",  # 强制按分类排序，不自动重排
+                    "categoryorder": "array",  # 使用数组顺序
+                    "categoryarray": all_dates  # 指定x轴的顺序
+                },
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "板块名称"}
+            },
+            "debug_info": {
+                "total_series": len(chart_data),
+                "date_range": f"{all_dates[0]} 到 {all_dates[-1]}",
+                "total_dates": len(all_dates)
             }
         })
 
@@ -2031,3 +2119,54 @@ class MarketReviewProcessor(BaseDataProcessor):
             
         except Exception as e:
             return self.error_response(f"获取配置信息失败: {str(e)}")
+    
+    def get_sector_rankings_by_period(self, df, latest_date_str, days_list=[5, 10, 20], top_n=10):
+        """
+        获取指定时间段内cumsum排名前N的板块
+        
+        Args:
+            df: 包含trade_date, name, change列的DataFrame
+            latest_date_str: 最新日期字符串，格式'YYYYMMDD'
+            days_list: 要统计的天数列表，默认[5, 10, 20]
+            top_n: 返回前N名，默认10
+            
+        Returns:
+            dict: 各时间段的排名结果
+        """
+        ranking_results = {}
+        
+        for days in days_list:
+            try:
+                # 计算开始日期
+                period_start_str = get_trade_date_by_offset(latest_date_str, days)
+                period_start = pd.to_datetime(period_start_str, format='%Y%m%d')
+                latest_date = pd.to_datetime(latest_date_str, format='%Y%m%d')
+                
+                # 筛选指定时间段的数据
+                period_df = df[(df['trade_date'] >= period_start) & (df['trade_date'] <= latest_date)]
+                
+                # 重新计算cumsum（避免使用全局cumsum）
+                period_df = period_df.copy()
+                period_df = period_df.sort_values(['name', 'trade_date'])
+                period_df['period_cumsum'] = period_df.groupby('name')['change'].cumsum()
+                
+                # 获取每个板块在该时间段的最新cumsum值
+                latest_cumsum = period_df.groupby('name')['period_cumsum'].last().reset_index()
+                
+                # 排序并获取前N名
+                top_sectors = latest_cumsum.sort_values('period_cumsum', ascending=False).head(top_n)
+                
+                ranking_results[f'近{days}日排名'] = [
+                    {
+                        'rank': idx + 1,
+                        'sector_name': row['name'],
+                        'cumsum_change': round(row['period_cumsum'], 4)
+                    }
+                    for idx, (_, row) in enumerate(top_sectors.iterrows())
+                ]
+                
+            except Exception as e:
+                print(f"⚠️ 计算近{days}日排名时出错: {e}")
+                ranking_results[f'近{days}日排名'] = []
+        
+        return ranking_results

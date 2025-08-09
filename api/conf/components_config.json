@@ -231,7 +231,7 @@
       },
       "板块分析": {
         "order": 4,
-        "components": ["plate_sector", "plate_sector_v2", "upLimitStocksReview"],
+        "components": ["plate_sector", "plate_sector_v2", "upLimitStocksReview", "plate_change"],
         "icon": "🏢",
         "collapsible": true,
         "description": "板块连板分布分析"
@@ -277,6 +277,27 @@
         "colSpan": 2
       },
       "height": "500px",
+      "description": "各市场成交额",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "cache": {
+        "strategy": "startup_once",
+        "description": "只在服务器启动时计算一次"
+      }
+    },
+    "plate_change": {
+      "component_id": "plate_change",
+      "component_type": "chart",
+      "title": "各板块涨幅",
+      "api_path": "/api/plate_change_daily",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "1000px",
       "description": "各市场成交额",
       "source_data_keys": [],
       "source_data_logic": "",
