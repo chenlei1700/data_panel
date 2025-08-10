@@ -102,8 +102,19 @@
       const customSectorName = ref('');
       const sectorInfo = ref(null);
       
-      // 图表标题
-      const chartTitle = ref('板块内股票日线涨幅');
+      // 图表标题 - 优先使用API返回的标题，其次使用配置中的标题，最后使用默认值
+      const chartTitle = computed(() => {
+        // 1. 优先使用API响应中的动态标题
+        if (chartData.value && chartData.value.layout && chartData.value.layout.title) {
+          return chartData.value.layout.title;
+        }
+        // 2. 其次使用组件配置中的标题
+        if (props.componentConfig && props.componentConfig.title) {
+          return props.componentConfig.title;
+        }
+        // 3. 最后使用默认标题
+        return '图表';
+      });
       
       // 日期选择相关状态
       const selectedStartDate = ref('2025-07-01');
@@ -251,12 +262,13 @@
           return;
         }
         
-        // 检查是否已存在
+        // 检查是否已存在 - 如果存在则直接选择，不报错
         if (sectorInfo.value && sectorInfo.value.availableSectors && 
             sectorInfo.value.availableSectors.includes(inputSector)) {
-          alert('该板块已存在于列表中');
+          // 直接选择该板块，不显示错误信息
           selectedSector.value = inputSector;
           customSectorName.value = '';
+          onSectorChange(); // 触发数据加载
           return;
         }
         
@@ -452,31 +464,34 @@
                 l: 60,   // 左边距，为y轴标签留空间
                 r: 30,   // 右边距
                 t: 50,   // 顶部边距，为标题留空间
-                b: 60,   // 底部边距，为x轴标签留空间
+                b: 120,  // 底部边距，为x轴标签留空间（增大以适应倾斜标签）
                 pad: 4
             },
             // 动态设置宽高以适应容器
             width: chartContainer.value.clientWidth,
-            height: chartContainer.value.clientHeight || 400,
+            height: chartContainer.value.clientHeight || 600,
             // 确保坐标轴能自动调整范围显示所有数据
             yaxis: {
-                ...layoutConfig.yaxis,
                 autorange: true,     // 自动调整y轴范围显示所有数据
-                fixedrange: false    // 允许缩放以便查看细节
+                fixedrange: false,   // 允许缩放以便查看细节
+                ...layoutConfig.yaxis
             },
             xaxis: {
-                ...layoutConfig.xaxis,
                 autorange: true,     // 自动调整x轴范围显示所有数据
-                fixedrange: false    // 允许缩放以便查看细节
+                fixedrange: false,   // 允许缩放以便查看细节
+                automargin: true,    // 自动调整边距以适应标签
+                ...layoutConfig.xaxis
             },
             // 图例设置，避免被裁剪
             legend: {
                 orientation: "h",    // 水平排列图例
                 x: 0,
-                y: -0.15,           // 放在图表下方
+                y: -0.2,            // 放在图表下方，增大间距
                 xanchor: 'left',
-                yanchor: 'top'
+                yanchor: 'top',
+                ...layoutConfig.legend
             },
+            // 后端配置会覆盖上面的默认配置
             ...layoutConfig
             };
           // 响应式配置

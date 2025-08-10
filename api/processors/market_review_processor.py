@@ -7,6 +7,7 @@ Description: 复盘页面
 import os
 from stock_data.factor.index.daily import FactorIndexDailyData
 from stock_data.kpl.up_limit import KplUpLimitData
+from stock_data.night_factor.daily import NightFactorData
 from stock_data.sentiment.market.daily import MarketSentimentDailyData
 from stock_data.stock.index_daily import IndexDailyData
 from stock_data.stock.stock_daily import StockDailyData
@@ -240,7 +241,7 @@ class MarketReviewProcessor(BaseDataProcessor):
             "chartType": "line",
             "data": chart_data,
             "layout": {
-                "title": f"板块内股票涨幅 - {sector_name} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
+                "title": f"板块内股票日线涨幅 - {sector_name} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
                 "xaxis": {
                     "title": "时间",
                     "type": "category",
@@ -386,7 +387,7 @@ class MarketReviewProcessor(BaseDataProcessor):
             "chartType": "line",
             "data": chart_data,
             "layout": {
-                "title": f"板块内股票涨幅 - {sector_name} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
+                "title": f"板块内股票分钟涨幅 - {sector_name} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
                 "xaxis": {
                     "title": "时间",
                     "type": "category",
@@ -410,6 +411,307 @@ class MarketReviewProcessor(BaseDataProcessor):
     def process_plate_change_daily(self):
         """各板块涨幅 - 带启动缓存"""
         return self._process_with_startup_cache('/api/plate_change_daily', self._original_plate_change_daily)
+    
+    def process_sector_lianban_distribution(self):
+        """板块连板数分布图 - 支持动态板块选择和日期范围选择"""
+        from flask import request
+        selected_sector = request.args.get('sector', None)
+        start_date = request.args.get('startDate', '2025-07-01')
+        end_date = request.args.get('endDate', None)
+        
+        return self._original_sector_lianban_distribution(selected_sector, start_date, end_date)
+    
+    def _original_sector_lianban_distribution(self, selected_sector=None, start_date='2025-07-01', end_date=None):
+        """板块连板数分布图 - 原始实现"""
+        import pandas as pd
+        from datetime import datetime, timedelta
+        
+        # 将开始日期转换为datetime类型
+        start_date_dt = pd.to_datetime(start_date, errors='coerce')
+        d = NightFactorData()
+        df = d.get_daily_data(start_date=start_date)
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+
+        # 确定结束日期
+        # 确定实际的开始和结束日期
+        if end_date is None or df['trade_date'].max() < pd.to_datetime(end_date, errors='coerce'):
+            # 如果没有指定结束日期，使用最新日期
+            latest_date = df['trade_date'].max()
+        else:
+            # 使用指定的结束日期
+            latest_date = pd.to_datetime(end_date, errors='coerce')
+        
+        # TODO: 这里你需要实现从 factor.night_factor 表获取数据的逻辑
+        # 期望的数据结构应该包含以下字段：
+        # - trade_date: 交易日期
+        # - sector: 板块名称  
+        # - stock_name: 股票名称
+        # - lian_ban_shu: 连板数
+        
+        df = df[(df['trade_date'] >= start_date_dt) & (df['trade_date'] <= latest_date)]
+        
+        
+        # 获取可用板块列表 - 你需要替换为实际的板块获取逻辑
+        available_sectors = df['sector'].unique().tolist()
+        
+        # 如果没有指定板块，使用第一个板块
+        if selected_sector is None:
+            selected_sector = available_sectors[0] if available_sectors else "无板块"
+        
+        # 筛选指定板块的数据
+        sector_data = df[df['sector'] == selected_sector].copy()
+
+        if sector_data.empty:
+            return jsonify({
+                "chartType": "heatmap", 
+                "data": [],
+                "layout": {"title": f"板块 {selected_sector} 无连板数据"},
+                "sectorInfo": {
+                    "currentSector": selected_sector,
+                    "availableSectors": available_sectors,
+                    "sectorCount": len(available_sectors)
+                },
+                "dateRangeInfo": {
+                    "currentStartDate": start_date_dt.strftime('%Y-%m-%d'),
+                    "currentEndDate": latest_date.strftime('%Y-%m-%d')
+                }
+            })
+        
+        # 处理连板数据
+        lianban_data = self._process_lianban_data_for_heatmap(sector_data)
+        
+        # 生成热力图数据
+        chart_data = self._generate_lianban_heatmap_chart(lianban_data, start_date_dt, latest_date)
+        
+        return jsonify({
+            "chartType": "heatmap",
+            "data": chart_data["data"],
+            "layout": {
+                "title": f"板块连板数分布 - {selected_sector} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
+                "xaxis": {
+                    "title": "日期", 
+                    "side": "bottom",
+                    "tickangle": -45,
+                    "automargin": True,
+                    "type": "category",  # 明确指定为分类轴
+                    "categoryorder": "array",  # 按数组顺序排列
+                    "categoryarray": chart_data.get("date_strings", [])  # 使用返回的日期字符串数组
+                },
+                "yaxis": {
+                    "title": "连板数", 
+                    "side": "left"
+                },
+                "colorscale": "Viridis",
+                "showscale": True,
+                "height": 1000,  # 增大固定高度以容纳动态行高
+                "margin": {"l": 120, "r": 50, "t": 80, "b": 120},
+                **chart_data["layout"]
+            },
+            "sectorInfo": {
+                "currentSector": selected_sector,
+                "availableSectors": available_sectors,
+                "sectorCount": len(available_sectors)
+            },
+            "dateRangeInfo": {
+                "currentStartDate": start_date_dt.strftime('%Y-%m-%d'),
+                "currentEndDate": latest_date.strftime('%Y-%m-%d')
+            }
+        })
+    
+    def _process_lianban_data_for_heatmap(self, sector_data):
+        """处理连板数据，按日期和连板数分组"""
+        lianban_dict = {}
+        
+        for _, row in sector_data.iterrows():
+            date_str = row['trade_date'].strftime('%m%d')  # 改为0701格式
+            lianban_days = int(row.get('lian_ban_shu', 1))  # 从night_factor表的lian_ban_shu字段获取
+            stock_name = row.get('stock_name', '未知股票')
+            
+            if date_str not in lianban_dict:
+                lianban_dict[date_str] = {}
+            
+            # 将10连板以上的归为"10连板以上"
+            if lianban_days >= 10:
+                lianban_key = "10连板以上"
+            else:
+                lianban_key = f"{lianban_days}连板"
+            
+            if lianban_key not in lianban_dict[date_str]:
+                lianban_dict[date_str][lianban_key] = []
+            
+            lianban_dict[date_str][lianban_key].append(stock_name)
+        
+        return lianban_dict
+    
+    def _generate_lianban_heatmap_chart(self, lianban_data, start_date, end_date):
+        """生成连板分布热力图数据 - 支持动态行高"""
+        # 定义连板数类别 - 顺序从1连板到10连板以上（1连板在最下方）
+        lianban_categories = [f"{i}连板" for i in range(1, 10)] + ["10连板以上"]
+        
+        # 生成日期序列 - 只包含工作日
+        date_range = pd.date_range(start=start_date, end=end_date, freq='B')  # 'B'表示工作日
+        date_strings = [d.strftime('%m%d') for d in date_range]  # 改为0701格式
+        
+        # 反转连板类别顺序，让1连板在下方
+        reversed_categories = list(reversed(lianban_categories))
+        
+        # 计算每个连板类型在所有日期中的最大股票数量，用于动态高度分配
+        max_stocks_per_category = {}
+        for lianban_cat in lianban_categories:
+            max_count = 0
+            for date_str in date_strings:
+                stocks = lianban_data.get(date_str, {}).get(lianban_cat, [])
+                max_count = max(max_count, len(stocks))
+            # 确保每个类别至少有最小高度（可容纳1只股票）
+            max_stocks_per_category[lianban_cat] = max(max_count, 1)
+        
+        # 计算动态y坐标位置 - 基于最大股票数量分配高度
+        y_positions = {}
+        current_y = 0
+        base_height = 1.2  # 进一步增加基础高度
+        stock_height = 1  # 大幅增加每只股票的高度，确保10只股票时有足够空间
+        
+        # 按照正序排列（1连板在下方），从下往上计算y坐标
+        for lianban_cat in lianban_categories:  # 使用原始顺序，1连板先计算（在下方）
+            max_stocks = max_stocks_per_category[lianban_cat]
+            # 计算该类别所需的总高度（基础高度 + 股票数量*单股高度）
+            category_height = base_height + max_stocks * stock_height
+            y_positions[lianban_cat] = current_y + category_height / 2  # 中心位置
+            current_y += category_height
+        
+        total_height = current_y
+        
+        # 创建矩形traces和注释
+        traces = []
+        annotations = []
+        
+        for i, date_str in enumerate(date_strings):
+            for lianban_cat in lianban_categories:
+                stocks = lianban_data.get(date_str, {}).get(lianban_cat, [])
+                stock_count = len(stocks)
+                
+                # 为所有格子创建矩形，包括没有数据的格子
+                # 计算颜色强度（基于股票数量）
+                if stock_count > 0:
+                    max_count_overall = max([len(stocks) for date_data in lianban_data.values() 
+                                           for stocks in date_data.values()]) or 1
+                    intensity = stock_count / max_count_overall
+                    
+                    # 白色到红色渐变
+                    red_value = int(255 * intensity)
+                    color = f"rgb({255}, {255-red_value}, {255-red_value})"
+                else:
+                    # 没有数据的格子显示为白色
+                    color = "rgb(255, 255, 255)"
+                    intensity = 0
+                
+                # 计算矩形的位置和大小
+                center_y = y_positions[lianban_cat]
+                max_stocks = max_stocks_per_category[lianban_cat]
+                
+                # 根据实际股票数量计算当前格子的高度
+                current_stock_count = len(stocks)
+                if current_stock_count == 0:
+                    # 空格子使用最小高度
+                    actual_rect_height = base_height
+                else:
+                    # 有股票的格子根据实际股票数量计算高度
+                    actual_rect_height = base_height + current_stock_count * stock_height
+                
+                # 最大高度限制（不超过分配给该类别的总高度）
+                max_allowed_height = base_height + max_stocks * stock_height
+                actual_rect_height = min(actual_rect_height, max_allowed_height)
+                
+                y_bottom = center_y - actual_rect_height / 2
+                y_top = center_y + actual_rect_height / 2
+                
+                # 创建悬浮框模板 - 股票列表纵向排列
+                if stock_count == 0:
+                    hover_template = f'%{{text}}<extra></extra>'
+                    hover_text = f'{lianban_cat}<br>日期: 20{date_str}<br>暂无股票'
+                else:
+                    # 构建股票列表显示 - 纵向排列，每个股票一行
+                    stock_list = '<br>'.join([f'• {stock}' for stock in stocks])
+                    hover_template = f'%{{text}}<extra></extra>'
+                    hover_text = f'{lianban_cat}<br>日期: 20{date_str}<br>股票数量: {stock_count}只<br><br>股票列表:<br>{stock_list}'
+                
+                # 创建矩形trace - 添加悬浮框样式配置
+                traces.append({
+                    'type': 'scatter',
+                    'x': [i-0.4, i+0.4, i+0.4, i-0.4, i-0.4],
+                    'y': [y_bottom, y_bottom, y_top, y_top, y_bottom],
+                    'mode': 'lines',
+                    'fill': 'toself',
+                    'fillcolor': color,
+                    'line': {'color': '#ddd', 'width': 1},
+                    'showlegend': False,
+                    'name': f'{lianban_cat}-{date_str}',
+                    'text': hover_text,
+                    'hovertemplate': hover_template,
+                    'hoverlabel': {
+                        'bgcolor': 'rgba(30, 30, 30, 0.9)',  # 深灰色半透明背景
+                        'bordercolor': 'white',               # 白色边框
+                        'font': {
+                            'color': 'white',                 # 白色字体
+                            'size': 14,                       # 字体大小
+                            'family': 'Arial, sans-serif'    # 字体家族
+                        }
+                    },
+                    'customdata': stocks  # 传递原始股票列表数组
+                })
+                
+                # 添加文本注释（只有当有股票时才添加股票名称）
+                if stocks:
+                    # 根据矩形高度和股票数量动态调整字体大小
+                    # 考虑股票数量：股票越多，字体相对小一些以避免拥挤
+                    stock_count_factor = max(0.7, 1.0 - (len(stocks) - 1) * 0.05)  # 股票数量越多，字体稍小
+                    base_font_size = min(16, max(13, int(actual_rect_height * 8)))
+                    font_size = int(base_font_size * stock_count_factor)
+                    stock_text = '<br>'.join(stocks)
+                    
+                    annotations.append({
+                        'x': i,
+                        'y': center_y,
+                        'text': stock_text,
+                        'showarrow': False,
+                        'font': {
+                            'size': font_size,
+                            'color': 'black' if intensity < 0.5 else 'white',
+                            'family': 'Arial, sans-serif'  # 添加字体族以提高可读性
+                        },
+                        'xanchor': 'center',
+                        'yanchor': 'middle'
+                    })
+        
+        return {
+            "data": traces,
+            "layout": {
+                "plot_bgcolor": 'white',
+                "paper_bgcolor": 'white',
+                "margin": {"l": 100, "r": 50, "t": 50, "b": 80},
+                "height": max(600, int(total_height * 100)),  # 动态调整总高度
+                "xaxis": {
+                    "title": "日期",
+                    "tickangle": -45,
+                    "tickmode": "array",
+                    "tickvals": list(range(len(date_strings))),
+                    "ticktext": date_strings,
+                    "range": [-0.5, len(date_strings)-0.5]
+                },
+                "yaxis": {
+                    "title": "连板类型",
+                    "tickmode": "array",
+                    "tickvals": [y_positions[cat] for cat in lianban_categories],  # 使用原始顺序
+                    "ticktext": lianban_categories,  # 使用原始顺序，1连板在下方
+                    "range": [0, total_height],
+                    "showgrid": True,
+                    "gridcolor": "#f0f0f0"
+                },
+                "annotations": annotations,
+                "showlegend": False
+            },
+            "date_strings": date_strings  # 返回日期字符串数组
+        }
 
     def _original_plate_change_daily(self):
         """市场情绪日数据的主板，创业板，科创版，ST板成交额"""
@@ -2541,7 +2843,8 @@ class MarketReviewProcessor(BaseDataProcessor):
             
         except Exception as e:
             return self.error_response(f"获取板块连板数分布失败: {e}")
-
+        
+        
     def process_sector_stacked_area_data(self):
         """板块堆叠面积图数据 - 调用 v2 方法"""
         return self.process_today_plate_up_limit_distribution_v2()
