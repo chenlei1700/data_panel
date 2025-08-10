@@ -213,12 +213,22 @@ export default {
     const categories = ref([])
     const expandedCategories = ref([])
     
-    // 双击展开/最小化状态
-    const isExpanded = ref(false)
+    // 双击展开/最小化状态 - 默认为展开状态
+    const isExpanded = ref(true)  // 改为true，初次启动时展开
     const isMinimized = ref(false)
     const originalWindowSize = ref({ width: 300, height: 400 })
-    const originalPosition = ref({ x: 20, y: 100 })
-    const currentPosition = ref({ x: 20, y: 100 }) // 跟踪当前位置
+    // 计算右下角位置作为默认位置
+    const getDefaultExpandedPosition = () => {
+      const viewportWidth = window.innerWidth || 1920
+      const viewportHeight = window.innerHeight || 1080
+      const expandedSize = { width: 450, height: 600 }
+      return {
+        x: viewportWidth - expandedSize.width - 20,
+        y: viewportHeight - expandedSize.height - 50
+      }
+    }
+    const originalPosition = ref(getDefaultExpandedPosition())
+    const currentPosition = ref(getDefaultExpandedPosition()) // 跟踪当前位置
     const minimizedPosition = ref(null) // 将在mounted时计算
     
     // 双击检测状态
@@ -345,9 +355,52 @@ export default {
           
           categories.value = organized
           
-          // 如果是首次加载且不是手动展开状态，展开第一个分类
-          if (expandedCategories.value.length === 0 && organized.length > 0 && !isExpanded.value) {
-            expandedCategories.value = [organized[0].name]
+          // 简化逻辑：如果是展开状态，总是展开所有分类
+          if (organized.length > 0) {
+            if (isExpanded.value) {
+              // 展开状态：展开所有分类
+              expandedCategories.value = organized.map(cat => cat.name)
+              console.log('🚀 展开状态，展开所有分类:', expandedCategories.value)
+              
+              // 调整窗口大小以适应所有展开的内容
+              nextTick(() => {
+                const totalItems = organized.reduce((total, cat) => total + (cat.items ? cat.items.length : 0), 0)
+                const headerHeight = 80
+                const searchHeight = showSearch.value ? 60 : 0
+                const categoriesHeaderHeight = organized.length * 70
+                const itemsHeight = totalItems * 50
+                const paddingHeight = 60
+                
+                const calculatedHeight = headerHeight + searchHeight + categoriesHeaderHeight + itemsHeight + paddingHeight
+                const maxViewportHeight = window.innerHeight - 100
+                const finalHeight = Math.min(Math.max(calculatedHeight, 400), maxViewportHeight)
+                const calculatedWidth = 450
+                
+                if (windowRef.value) {
+                  // 确保在右下角位置
+                  const rightBottomPosition = {
+                    x: window.innerWidth - calculatedWidth - 20,
+                    y: window.innerHeight - finalHeight - 50
+                  }
+                  
+                  // 更新位置
+                  currentPosition.value = rightBottomPosition
+                  originalPosition.value = rightBottomPosition
+                  
+                  // 设置窗口大小和位置
+                  windowRef.value.setSize(calculatedWidth, finalHeight)
+                  windowRef.value.setPosition(rightBottomPosition.x, rightBottomPosition.y)
+                  console.log('🔍 调整展开窗口大小和位置:', { 
+                    size: { width: calculatedWidth, height: finalHeight },
+                    position: rightBottomPosition
+                  })
+                }
+              })
+            } else {
+              // 非展开状态：只展开第一个分类
+              expandedCategories.value = [organized[0].name]
+              console.log('🔍 普通状态，展开第一个分类:', expandedCategories.value)
+            }
           }
           
         } catch (error) {
@@ -677,6 +730,7 @@ export default {
     }
 
     const handleSettingsChange = () => {
+      // 简化：只保存基本设置，不保存状态
       const settings = {
         showSearch: showSearch.value,
         showItemDescription: showItemDescription.value,
@@ -725,7 +779,18 @@ export default {
       showItemVisibility.value = preferences.showItemVisibility !== false
       showItemPosition.value = preferences.showItemPosition || false
       showItemActions.value = preferences.showItemActions !== false
-      expandedCategories.value = preferences.expandedCategories || []
+      
+      // 简化：不保存和加载expandedCategories，每次刷新都重新决定
+      expandedCategories.value = []
+      
+      // 默认为展开状态
+      isExpanded.value = true  // 简化：总是默认为展开
+      isMinimized.value = false
+      
+      // 设置右下角位置
+      const defaultPos = getDefaultExpandedPosition()
+      currentPosition.value = defaultPos
+      originalPosition.value = defaultPos
     }
 
     // 键盘快捷键
@@ -784,14 +849,36 @@ export default {
       scanComponents()
       startAutoScan()
       
-      // 计算最小化位置（右下角）
+      // 计算位置
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
-      const miniSize = { width: 100, height: 40 }
       
+      // 计算最小化位置（右下角）
+      const miniSize = { width: 100, height: 40 }
       minimizedPosition.value = {
         x: viewportWidth - miniSize.width - 20,
         y: viewportHeight - miniSize.height - 50
+      }
+      
+      // 如果是展开状态，设置展开位置（右下角）
+      if (isExpanded.value) {
+        const expandedSize = { width: 450, height: 600 } // 展开状态的预估大小
+        const expandedPosition = {
+          x: viewportWidth - expandedSize.width - 20,
+          y: viewportHeight - expandedSize.height - 50
+        }
+        
+        // 更新当前位置和原始位置
+        currentPosition.value = expandedPosition
+        originalPosition.value = expandedPosition
+        
+        // 设置窗口位置
+        nextTick(() => {
+          if (windowRef.value) {
+            windowRef.value.setPosition(expandedPosition.x, expandedPosition.y)
+            console.log('🚀 设置展开状态右下角位置:', expandedPosition)
+          }
+        })
       }
       
       document.addEventListener('keydown', handleKeyDown)

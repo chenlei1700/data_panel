@@ -13,7 +13,7 @@ from stock_data.stock.stock_daily import StockDailyData
 from stock_data.stock_minute import StockMinuteData
 from stock_data.ths.concept_data import ThsConceptData
 from stock_data.ths.concept_index import ThsConceptIndexData
-from utils.common import get_trade_date_by_offset, get_trade_date_list
+from utils.common import get_latest_stock_name_from_stock_id, get_trade_date_by_offset, get_trade_date_list, get_stock_name_code_list
 from .base_processor import BaseDataProcessor
 from flask import jsonify, request
 import pandas as pd
@@ -37,6 +37,12 @@ class MarketReviewProcessor(BaseDataProcessor):
         df['amount'] = df['amount'].round(2)
         df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
         df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        
+        # 获取所有唯一的日期并按时间顺序排序，用于强制x轴顺序
+        all_dates = df['trade_date'].unique()
+        all_dates = sorted(pd.to_datetime(all_dates))
+        date_order = [date.strftime('%m/%d') for date in all_dates]
+        
         market_list = ['主板', '创业板', '科创板', 'ST','全市场']
         chart_data = []
         for market in market_list:
@@ -54,7 +60,12 @@ class MarketReviewProcessor(BaseDataProcessor):
             "data": chart_data,
             "layout": {
                 "title": "各市场成交额",
-                "xaxis": {"title": "时间"},
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",
+                    "categoryorder": "array",
+                    "categoryarray": date_order
+                },
                 "yaxis": {"title": "成交额(亿元)"},
                 "legend": {"title": "市场名称"}
             }
@@ -72,6 +83,12 @@ class MarketReviewProcessor(BaseDataProcessor):
        
         df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
         df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        
+        # 获取所有唯一的日期并按时间顺序排序，用于强制x轴顺序
+        all_dates = df['trade_date'].unique()
+        all_dates = sorted(pd.to_datetime(all_dates))
+        date_order = [date.strftime('%m/%d') for date in all_dates]
+        
         market_list = ['主板', '创业板', 'ST','全市场']
         # 对name列groupby，计算change列的cumsum
         df['change'] = df.groupby('name')['change'].cumsum()
@@ -90,54 +107,88 @@ class MarketReviewProcessor(BaseDataProcessor):
             "chartType": "line",
             "data": chart_data,
             "layout": {
-                "title": "各市场成交额",
-                "xaxis": {"title": "时间"},
-                "yaxis": {"title": "成交额(亿元)"},
+                "title": "各市场涨幅",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",
+                    "categoryorder": "array",
+                    "categoryarray": date_order
+                },
+                "yaxis": {"title": "涨幅(%)"},
                 "legend": {"title": "市场名称"}
             }
         })
     
     def process_plate_stocks_change_daily(self):
-        """各板块股票涨幅 - 带启动缓存"""
-        return self._process_with_startup_cache('/api/plate_stocks_change_daily', self._original_plate_stocks_change_daily)
+        """各板块股票涨幅 - 支持动态板块选择和日期范围选择"""
+        # 从请求参数中获取选中的板块名称和日期范围
+        from flask import request
+        selected_sector = request.args.get('sector', None)
+        start_date = request.args.get('startDate', '2025-07-01')  # 默认开始日期
+        end_date = request.args.get('endDate', None)  # 默认结束日期为None，使用最新日期
+        
+        # 直接调用原始方法，不使用启动缓存
+        # 因为启动缓存会忽略sector和日期参数，导致选择不同参数时返回相同数据
+        return self._original_plate_stocks_change_daily(selected_sector, start_date, end_date)
     
-    def _original_plate_stocks_change_daily(self):
-        """各板块股票涨幅"""
+    def _original_plate_stocks_change_daily(self, selected_sector=None, start_date='2025-07-01', end_date=None):
+        """各板块股票涨幅 - 支持动态板块选择和具体日期范围选择"""
+        
         d = ThsConceptIndexData()
-        df = d.get_daily_data(start_date='2025-07-01')
+        # 使用传入的开始日期获取数据
+        df = d.get_daily_data(start_date=start_date)
 
         df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
         df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
-        #获取最新日期
-        latest_date = df['trade_date'].max()
+        
+        # 确定实际的开始和结束日期
+        if end_date is None or df['trade_date'].max() < pd.to_datetime(end_date, errors='coerce'):
+            # 如果没有指定结束日期，使用最新日期
+            latest_date = df['trade_date'].max()
+        else:
+            # 使用指定的结束日期
+            latest_date = pd.to_datetime(end_date, errors='coerce')
+        
+        # 将开始日期转换为datetime类型
+        start_date_dt = pd.to_datetime(start_date, errors='coerce')
+        
+        temp_df = df.copy()  # 保留原始数据
+        # 筛选指定日期范围内的数据
+        df = df[(df['trade_date'] >= start_date_dt) & (df['trade_date'] <= latest_date)]
+        
         latest_date_str = latest_date.strftime('%Y%m%d')
-        start_date_str = get_trade_date_by_offset(latest_date_str, 20)
-        # 将字符串日期转换为datetime类型以便比较
-        start_date = pd.to_datetime(start_date_str, format='%Y%m%d')
-        # 获取从start_date到latest_date的所有数据
-        df = df[(df['trade_date'] >= start_date) & (df['trade_date'] <= latest_date)]
-
         
         #获取近5日，近10日，近20日的cumsum各排名前10的板块列表
-        ranking_results = self.get_sector_rankings_by_period(df, latest_date_str, [5, 10, 20], 10)
+        ranking_results = self.get_sector_rankings_by_period(temp_df, latest_date_str, [5, 10, 20], 10)
         
 
         # 获取ranking_results的列表，并在df中筛选出这些板块
         sector_names = [item['sector_name'] for sublist in ranking_results.values() for item in sublist]
+        
+        # 如果没有指定板块，使用默认的第一个板块
+        if selected_sector is None:
+            sector_name = sector_names[0]
+        else:
+            sector_names.append(selected_sector)
+            sector_name = selected_sector
+        
         # 去除重复的板块名称
         sector_names = list(set(sector_names))
-        
-        # 获取日线股票数据
+
+        # 获取日线股票数据 - 使用相同的日期范围
         d = StockDailyData()
-        stock_df = d.get_daily_data(start_date='2025-07-01')
+        stock_df = d.get_daily_data(start_date=start_date)
         stock_df['trade_date'] = pd.to_datetime(stock_df['trade_date'], errors='coerce')
+        
+        # 筛选股票数据到相同的日期范围
+        stock_df = stock_df[(stock_df['trade_date'] >= start_date_dt) & (stock_df['trade_date'] <= latest_date)]
+        
         # 获取板块内股票列表
         d = ThsConceptData()
-        concept_df = d.get_daily_data(start_date='2025-07-01')
+        concept_df = d.get_daily_data(start_date=start_date)
         # 获取最新交易日数据
-        latest_date = concept_df['trade_date'].max()
-        concept_df = concept_df[concept_df['trade_date'] == latest_date]
-        sector_name=sector_names[0]
+        concept_latest_date = concept_df['trade_date'].max()
+        concept_df = concept_df[concept_df['trade_date'] == concept_latest_date]
         # 获取股票列表
         stock_list = concept_df[concept_df['concept_name'] == sector_name]['stocks'].values[0].split(',')
         # 并变成整数型
@@ -145,8 +196,14 @@ class MarketReviewProcessor(BaseDataProcessor):
         # 获取stock_df中id在stock_list中的数据
         stock_df = stock_df[stock_df['id'].isin(stock_list)]
         # groupby id，计算change列的cumsum
-        stock_df['change'] = stock_df.groupby('id')['change'].cumsum()
+        stock_df['change_cumsum'] = stock_df.groupby('id')['change'].cumsum()
         stock_df['date_str'] = stock_df['trade_date'].dt.strftime('%m/%d')
+        
+        # 获取所有唯一的日期并按时间顺序排序，用于强制x轴顺序
+        all_dates = stock_df['trade_date'].unique()
+        all_dates = sorted(pd.to_datetime(all_dates))
+        date_order = [date.strftime('%m/%d') for date in all_dates]
+        
         chart_data = []
         for stock_id in stock_list:
             stock_data = stock_df[stock_df['id'] == stock_id]
@@ -154,8 +211,163 @@ class MarketReviewProcessor(BaseDataProcessor):
                 stock_data = stock_data.sort_values(by='trade_date')
                 # 获取股票名称 - 取第一行的值
                 stock_name = stock_data['stock_name'].iloc[0]
-                
+                # 统计5日，10日，20日涨幅大于9.7的次数，分别用up_limit_count5, up_limit_count_10,up_limit_count20
                 x_data = stock_data['date_str'].tolist()
+                y_data = stock_data['change_cumsum'].tolist()
+                tmp_data = stock_data['change'].tolist()
+                up_limit_count_5 = sum(1 for change in tmp_data[-5:] if change > 9.7)
+                up_limit_count_10 = sum(1 for change in tmp_data[-10:] if change > 9.7)
+                up_limit_count_15 = sum(1 for change in tmp_data[-15:] if change > 9.7)
+                up_limit_count_20 = sum(1 for change in tmp_data[-20:] if change > 9.7)
+                up_limit_count_20 = up_limit_count_20-up_limit_count_15
+                up_limit_count_15 = up_limit_count_15-up_limit_count_10
+                up_limit_count_10 = up_limit_count_10-up_limit_count_5
+
+
+                chart_data.append({
+                    "name": f'{stock_name}_{up_limit_count_20}-{up_limit_count_15}-{up_limit_count_10}-{up_limit_count_5}',
+                    "x": x_data,
+                    "y": y_data,
+                    "mode": "lines+markers+text",  # 添加 +text 模式
+                    "line": {"width": 2},
+                    "text": [f'{stock_name}——{sector_name}' if i == len(x_data)-1 else '' for i in range(len(x_data))],
+                    "textposition": "middle right",
+                    "textfont": {"size": 10, "color": "black"},
+                    "showlegend": True
+                })
+        
+        return jsonify({
+            "chartType": "line",
+            "data": chart_data,
+            "layout": {
+                "title": f"板块内股票涨幅 - {sector_name} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",
+                    "categoryorder": "array",
+                    "categoryarray": date_order
+                },
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "股票名称"}
+            },
+            "sectorInfo": {
+                "currentSector": sector_name,
+                "availableSectors": sector_names,
+                "sectorCount": len(sector_names)
+            },
+            "dateRangeInfo": {
+                "currentStartDate": start_date_dt.strftime('%Y-%m-%d'),
+                "currentEndDate": latest_date.strftime('%Y-%m-%d')
+            }
+        })
+    
+    def process_plate_stocks_change_minute(self):
+        """各板块股票涨幅 - 支持动态板块选择和日期范围选择"""
+        # 从请求参数中获取选中的板块名称和日期范围
+        from flask import request
+        selected_sector = request.args.get('sector', None)
+        start_date = request.args.get('startDate', '2025-07-01')  # 默认开始日期
+        end_date = request.args.get('endDate', None)  # 默认结束日期为None，使用最新日期
+        
+        # 直接调用原始方法，不使用启动缓存
+        # 因为启动缓存会忽略sector和日期参数，导致选择不同参数时返回相同数据
+        return self._original_plate_stocks_change_minute(selected_sector, start_date, end_date)
+    
+    def _original_plate_stocks_change_minute(self, selected_sector=None, start_date='2025-07-01', end_date=None):
+        """各板块股票涨幅 - 支持动态板块选择和具体日期范围选择"""
+        # 将开始日期转换为datetime类型
+        start_date_dt = pd.to_datetime(start_date, errors='coerce')
+
+        d = ThsConceptIndexData()
+        # 使用传入的开始日期获取数据
+        df = d.get_daily_data(start_date=start_date)
+
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+        df['date_str'] = df['trade_date'].dt.strftime('%m/%d')
+        
+        #确定实际的开始和结束日期
+        if end_date is None or df['trade_date'].max() < pd.to_datetime(end_date, errors='coerce'):
+            # 如果没有指定结束日期，使用数据的最新日期
+            latest_date = df['trade_date'].max()
+        else:
+            # 使用指定的结束日期，但不能超过数据的最新日期
+            end_date_dt = pd.to_datetime(end_date, errors='coerce')
+            data_max_date = df['trade_date'].max()
+            latest_date = min(end_date_dt, data_max_date)
+        
+        
+        temp_df = df.copy()  # 保留原始数据
+        # 筛选指定日期范围内的数据
+        df = df[(df['trade_date'] >= start_date_dt) & (df['trade_date'] <= latest_date)]
+        
+        latest_date_str = latest_date.strftime('%Y%m%d')
+        
+        #获取近5日，近10日，近20日的cumsum各排名前10的板块列表
+        ranking_results = self.get_sector_rankings_by_period(temp_df, latest_date_str, [5, 10, 20], 10)
+        
+        # 获取ranking_results的列表，并在df中筛选出这些板块
+        sector_names = [item['sector_name'] for sublist in ranking_results.values() for item in sublist]
+        
+        # 如果没有指定板块，使用默认的第一个板块
+        if selected_sector is None :
+            sector_name = sector_names[0]
+        else:
+            sector_name = selected_sector
+            sector_names.append(selected_sector)
+        
+        # 去除重复的板块名称
+        sector_names = list(set(sector_names))
+
+        # 获取分钟线股票数据 - 使用相同的日期范围
+        d = StockMinuteData()
+        d.set_table_name()  # 设置表名
+        stock_df = d.get_minute_data_by_date(start_date=latest_date_str, end_date=latest_date_str) # 只取latest_date日的数据
+        stock_df['trade_date'] = pd.to_datetime(stock_df['trade_date'], errors='coerce')
+        # time列应该已经包含日期和时间信息，确保其为datetime类型
+        stock_df['time'] = pd.to_datetime(stock_df['time'], errors='coerce')
+        
+        # 筛选股票数据到相同的日期范围
+        # stock_df = stock_df[(stock_df['trade_date'] >= start_date_dt) & (stock_df['trade_date'] <= latest_date)]
+        
+        # 获取板块内股票列表
+        d = ThsConceptData()
+        concept_df = d.get_daily_data(start_date=start_date)
+        # 获取最新交易日数据
+        concept_latest_date = concept_df['trade_date'].max()
+        concept_df = concept_df[concept_df['trade_date'] == concept_latest_date]
+        # 获取股票列表
+        stock_list = concept_df[concept_df['concept_name'] == sector_name]['stocks'].values[0].split(',')
+        # 并变成整数型
+        stock_list = [int(stock) for stock in stock_list if stock.isdigit()]
+        # 获取stock_df中id在stock_list中的数据
+        stock_df = stock_df[stock_df['id'].isin(stock_list)]
+        stock_df['change'] = ((stock_df['close']- stock_df['pre_close'])/ stock_df['pre_close'] *100).round(2) # 计算每分钟的涨幅
+        
+        stock_df['time'] = pd.to_datetime(stock_df['time'], errors='coerce')
+        # 去除09:30之前的数据
+        stock_df = stock_df[stock_df['time'].dt.strftime('%H:%M') >= '09:30']
+        stock_df['time_str'] = stock_df['time'].dt.strftime('%m%d_%H:%M')
+        # 如果pre_close列没有值或为0，填充pre_close列的值为1
+        stock_df['pre_close'] = stock_df['pre_close'].replace(0, 1)
+        
+        stock_df = get_latest_stock_name_from_stock_id(stock_df)
+        # stock_df['date_str'] = stock_df['trade_date'].dt.strftime('%m/%d')
+        
+        # 获取所有唯一的日期并按时间顺序排序，用于强制x轴顺序
+        all_dates = stock_df['time'].unique()
+        all_dates = sorted(pd.to_datetime(all_dates))
+        date_order = [date.strftime('%m%d_%H:%M') for date in all_dates]
+        
+        chart_data = []
+        for stock_id in stock_list:
+            stock_data = stock_df[stock_df['id'] == stock_id]
+            
+            if not stock_data.empty:
+                stock_data = stock_data.sort_values(by='time')
+                # 获取股票名称 - 取第一行的值
+                stock_name = stock_data['stock_name'].iloc[0]
+                
+                x_data = stock_data['time_str'].tolist()
                 y_data = stock_data['change'].tolist()
                 
                 chart_data.append({
@@ -164,9 +376,9 @@ class MarketReviewProcessor(BaseDataProcessor):
                     "y": y_data,
                     "mode": "lines+markers+text",  # 添加 +text 模式
                     "line": {"width": 2},
-                    "text": [f'{stock_name}——{sector_name}' if i == len(x_data)-1 else '' for i in range(len(x_data))],
+                    "text": [f'{stock_name}' if i == len(x_data)-1 else '' for i in range(len(x_data))],
                     "textposition": "middle right",
-                    "textfont": {"size": 25, "color": "black"},
+                    "textfont": {"size": 10, "color": "black"},
                     "showlegend": True
                 })
         
@@ -174,10 +386,24 @@ class MarketReviewProcessor(BaseDataProcessor):
             "chartType": "line",
             "data": chart_data,
             "layout": {
-                "title": "板块内股票涨幅",
-                "xaxis": {"title": "时间"},
-                "yaxis": {"title": "成交额(亿元)"},
-                "legend": {"title": "市场名称"}
+                "title": f"板块内股票涨幅 - {sector_name} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
+                "xaxis": {
+                    "title": "时间",
+                    "type": "category",
+                    "categoryorder": "array",
+                    "categoryarray": date_order
+                },
+                "yaxis": {"title": "涨幅(%)"},
+                "legend": {"title": "股票名称"}
+            },
+            "sectorInfo": {
+                "currentSector": sector_name,
+                "availableSectors": sector_names,
+                "sectorCount": len(sector_names)
+            },
+            "dateRangeInfo": {
+                "currentStartDate": start_date_dt.strftime('%Y-%m-%d'),
+                "currentEndDate": latest_date.strftime('%Y-%m-%d')
             }
         })
     

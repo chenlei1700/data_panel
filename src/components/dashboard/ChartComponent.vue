@@ -1,16 +1,85 @@
 <template>
 <div class="chart-wrapper">
-    <!-- 图表容器始终存在 -->
-    <div class="chart-container" ref="chartContainer"></div>
+    <!-- 标题和选择器行 -->
+    <div class="chart-header" v-if="showSectorSelector && (sectorInfo?.availableSectors || dateRangeInfo?.availableDateRanges)">
+      <div class="chart-title">{{ chartTitle || '图表' }}</div>
+      <div class="selector-group">
+        <!-- 日期范围选择器 -->
+        <div class="date-selector" v-if="showSectorSelector">
+          <div class="date-range-container">
+            <div class="date-input-group">
+              <label>开始日期：</label>
+              <input 
+                type="date" 
+                v-model="selectedStartDate" 
+                @change="onDateRangeChange"
+                class="date-input"
+                :max="selectedEndDate || getCurrentDate()"
+              />
+            </div>
+            <div class="date-input-group">
+                <label>结束日期：</label>
+                <input 
+                  type="date" 
+                  v-model="selectedEndDate" 
+                  @change="onDateRangeChange"
+                  class="date-input"
+                  :min="selectedStartDate"
+                  :max="getCurrentDate()"
+                />
+              </div>
+              <div class="date-shortcuts">
+                <button @click="setDateRange(30)" class="date-shortcut-btn">最近30天</button>
+                <button @click="setDateRange(60)" class="date-shortcut-btn">最近60天</button>
+                <button @click="setDateRange(90)" class="date-shortcut-btn">最近90天</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 板块选择器 -->
+          <div class="sector-selector" v-if="sectorInfo && sectorInfo.availableSectors">
+            <div class="sector-select-group">
+              <label>选择板块：</label>
+              <select v-model="selectedSector" @change="onSectorChange">
+                <option v-for="sector in sectorInfo.availableSectors" 
+                        :key="sector" 
+                        :value="sector">
+                  {{ sector }}
+                </option>
+              </select>
+              <span class="sector-count">(共{{ sectorInfo.sectorCount }}个板块)</span>
+            </div>
+            <div class="sector-input-group">
+              <label>或输入板块：</label>
+              <input 
+                type="text" 
+                v-model="customSectorName" 
+                placeholder="请输入板块名称"
+                class="sector-input"
+                @keyup.enter="addCustomSector"
+              />
+              <button @click="addCustomSector" class="add-sector-btn">确定</button>
+            </div>
+          </div>
+        </div>
+    </div>
     
-    <!-- 加载中或错误覆盖层 -->
-    <div v-if="loading" class="chart-overlay chart-loading">加载中...</div>
-    <div v-else-if="error" class="chart-overlay chart-error">{{ error }}</div>
+    <!-- 图表容器 -->
+    <div class="chart-container" ref="chartContainer">
+      <!-- 加载中或错误覆盖层 - 只在图表容器内显示 -->
+      <div v-if="loading" class="chart-overlay chart-loading">
+        <div class="loading-content">
+          <div class="loading-spinner"></div>
+          <span>加载中...</span>
+        </div>
+      </div>
+      <div v-else-if="error" class="chart-overlay chart-error">{{ error }}</div>
+    </div>
 </div>
 </template>
   
   <script>
-  import { defineComponent, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+  import { defineComponent, ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue';
   import axios from 'axios';
   import Plotly from 'plotly.js-dist';
   
@@ -24,9 +93,45 @@
     },
     setup(props) {
       const chartContainer = ref(null);
-      const loading = ref(true);
+      const loading = ref(false); // 初始不显示加载状态
       const error = ref(null);
       const chartData = ref(null);
+      
+      // 板块选择相关状态
+      const selectedSector = ref(null);
+      const customSectorName = ref('');
+      const sectorInfo = ref(null);
+      
+      // 图表标题
+      const chartTitle = ref('板块内股票日线涨幅');
+      
+      // 日期选择相关状态
+      const selectedStartDate = ref('2025-07-01');
+      const selectedEndDate = ref(getCurrentDate());
+      const dateRangeInfo = ref(null);
+      
+      // 获取当前日期的方法
+      function getCurrentDate() {
+        return new Date().toISOString().split('T')[0];
+      }
+      
+      // 设置日期范围的快捷方法
+      const setDateRange = (days) => {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - days);
+        
+        selectedEndDate.value = endDate.toISOString().split('T')[0];
+        selectedStartDate.value = startDate.toISOString().split('T')[0];
+        
+        // 触发数据重新加载
+        onDateRangeChange();
+      };
+      
+      // 计算是否显示板块选择器
+      const showSectorSelector = computed(() => {
+        return props.componentConfig && props.componentConfig.supportsSectorSelection === true;
+      });
       
       const resizeObserver = ref(null);
       
@@ -132,7 +237,62 @@
         };
       };
       
+      // 板块选择改变处理函数
+      const onSectorChange = () => {
+        console.log('板块选择改变:', selectedSector.value);
+        loadChartData();
+      };
+      
+      // 添加自定义板块
+      const addCustomSector = () => {
+        const inputSector = customSectorName.value.trim();
+        if (!inputSector) {
+          alert('请输入板块名称');
+          return;
+        }
+        
+        // 检查是否已存在
+        if (sectorInfo.value && sectorInfo.value.availableSectors && 
+            sectorInfo.value.availableSectors.includes(inputSector)) {
+          alert('该板块已存在于列表中');
+          selectedSector.value = inputSector;
+          customSectorName.value = '';
+          return;
+        }
+        
+        // 添加到可用板块列表
+        if (sectorInfo.value && sectorInfo.value.availableSectors) {
+          sectorInfo.value.availableSectors.unshift(inputSector);
+          sectorInfo.value.sectorCount = sectorInfo.value.availableSectors.length;
+        } else {
+          // 如果还没有sectorInfo，创建一个
+          sectorInfo.value = {
+            availableSectors: [inputSector],
+            sectorCount: 1,
+            currentSector: inputSector
+          };
+        }
+        
+        // 选择新添加的板块
+        selectedSector.value = inputSector;
+        customSectorName.value = '';
+        
+        // 重新加载图表数据
+        console.log('添加自定义板块:', inputSector);
+        loadChartData();
+      };
+      
+      // 日期范围选择改变处理函数
+      const onDateRangeChange = () => {
+        console.log('日期范围选择改变:', selectedStartDate.value);
+        loadChartData();
+      };
+      
       const loadChartData = async (url) => {
+        // 添加一个最小加载时间，防止loading状态闪烁
+        const startTime = Date.now();
+        const minLoadingTime = 300; // 最小加载时间300ms
+        
         loading.value = true;
         error.value = null;
         
@@ -149,6 +309,23 @@
             console.log('添加componentId参数:', props.componentConfig.id);
           }
           
+          // 如果支持板块选择且已选择板块，添加sector参数
+          if (showSectorSelector.value && selectedSector.value) {
+            urlObj.searchParams.set('sector', selectedSector.value);
+            console.log('添加sector参数:', selectedSector.value);
+          }
+          
+          // 如果支持日期选择且已选择日期，添加日期参数
+          if (showSectorSelector.value && selectedStartDate.value) {
+            urlObj.searchParams.set('startDate', selectedStartDate.value);
+            console.log('添加startDate参数:', selectedStartDate.value);
+          }
+          
+          if (showSectorSelector.value && selectedEndDate.value) {
+            urlObj.searchParams.set('endDate', selectedEndDate.value);
+            console.log('添加endDate参数:', selectedEndDate.value);
+          }
+          
           const finalUrl = urlObj.toString();
           console.log('最终请求URL:', finalUrl);
           
@@ -156,18 +333,50 @@
           chartData.value = response.data;
           console.log('收到的图表数据:', chartData.value);
           
-          // 先将 loading 设为 false，让容器渲染出来
-          loading.value = false;
+          // 处理板块信息（如果存在）
+          if (showSectorSelector.value && chartData.value.sectorInfo) {
+            sectorInfo.value = chartData.value.sectorInfo;
+            // 如果没有选中的板块，使用当前板块作为默认值
+            if (!selectedSector.value) {
+              selectedSector.value = chartData.value.sectorInfo.currentSector;
+            }
+            console.log('更新板块信息:', sectorInfo.value);
+          }
           
-          // 使用 nextTick 确保 DOM 已更新后再渲染图表
-          nextTick(() => {
-            console.log('nextTick 后检查容器:', chartContainer.value);
-            renderChart();
-          });
+          // 处理日期范围信息（如果存在）
+          if (showSectorSelector.value && chartData.value.dateRangeInfo) {
+            dateRangeInfo.value = chartData.value.dateRangeInfo;
+            // 如果没有选中的开始日期，使用当前开始日期作为默认值
+            if (!selectedStartDate.value) {
+              selectedStartDate.value = chartData.value.dateRangeInfo.currentStartDate;
+            }
+            console.log('更新日期范围信息:', dateRangeInfo.value);
+          }
+          
+          // 确保最小加载时间，防止闪烁
+          const elapsedTime = Date.now() - startTime;
+          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+          
+          setTimeout(() => {
+            // 先将 loading 设为 false，让容器渲染出来
+            loading.value = false;
+            
+            // 使用 nextTick 确保 DOM 已更新后再渲染图表
+            nextTick(() => {
+              console.log('nextTick 后检查容器:', chartContainer.value);
+              renderChart();
+            });
+          }, remainingTime);
         } catch (err) {
-          error.value = `加载图表数据失败: ${err.message}`;
-          console.error('获取图表数据出错:', err);
-          loading.value = false;
+          // 错误情况也要等待最小时间
+          const elapsedTime = Date.now() - startTime;
+          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+          
+          setTimeout(() => {
+            error.value = `加载图表数据失败: ${err.message}`;
+            console.error('获取图表数据出错:', err);
+            loading.value = false;
+          }, remainingTime);
         }
       };
       
@@ -382,7 +591,23 @@
         error,
         refreshData,
         handleRefresh,
-        getComponentDelay
+        getComponentDelay,
+        // 图表标题
+        chartTitle,
+        // 板块选择相关
+        showSectorSelector,
+        selectedSector,
+        customSectorName,
+        sectorInfo,
+        onSectorChange,
+        addCustomSector,
+        // 日期选择相关
+        selectedStartDate,
+        selectedEndDate,
+        dateRangeInfo,
+        onDateRangeChange,
+        getCurrentDate,
+        setDateRange
       };
     }
   });
@@ -398,10 +623,74 @@
     overflow: hidden;
 }
 
-.chart-container {
-  grid-area: chart;
+.chart-wrapper {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 标题和选择器行 */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid #e9ecef;
+  gap: 20px;
+}
+
+.chart-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  flex-grow: 1;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* 图表包装器样式 */
+.chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* 图表头部样式 */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  min-height: 40px;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* 选择器组合样式 - 在标题行中 */
+.selector-group {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chart-container {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 60px); /* 减去header的高度 */
+  position: relative;
 }
 
 /* 更全面的深度选择器以控制 Plotly 生成的元素 */
@@ -429,12 +718,39 @@
 }
 
 .chart-overlay {
-  grid-area: chart;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 999;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .chart-error {
@@ -454,6 +770,157 @@
 :deep(.main-svg) {
   width: 100% !important;
   height: 100% !important;
+}
+
+/* 板块选择器样式 - 在标题行中使用 */
+.sector-selector {
+  padding: 6px 10px;
+  background: rgba(248, 249, 250, 0.95);
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sector-select-group,
+.sector-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sector-input {
+  padding: 3px 6px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 11px;
+  color: #495057;
+  min-width: 100px;
+  max-width: 120px;
+}
+
+.sector-input:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.25);
+}
+
+.add-sector-btn {
+  padding: 3px 8px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-sector-btn:hover {
+  background-color: #0056b3;
+}
+
+.add-sector-btn:active {
+  background-color: #004085;
+}
+
+/* 日期选择器样式 - 在标题行中使用 */
+.date-selector {
+  padding: 6px 10px;
+  background: rgba(248, 249, 250, 0.95);
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.date-range-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;  /* 进一步减少间距 */
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;  /* 减少组内间距 */
+}
+
+.date-input-group label {
+  font-weight: 500;
+  color: #495057;
+  margin: 0;
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 50px;
+}
+
+.sector-selector label,
+.date-selector label {
+  font-weight: 500;
+  color: #495057;
+  margin: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sector-selector select,
+.date-selector select,
+.date-selector input[type="date"] {
+  padding: 3px 6px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 11px;
+  color: #495057;
+  min-width: 100px;
+  max-width: 120px;
+}
+
+.sector-selector select:focus,
+.date-selector select:focus,
+.date-selector input[type="date"]:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.25);
+}
+
+.date-shortcuts {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+  justify-content: center;
+}
+
+.date-shortcut-btn {
+  padding: 2px 6px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.date-shortcut-btn:hover {
+  background-color: #5a6268;
+}
+
+.date-shortcut-btn:active {
+  background-color: #495057;
+}
+
+.sector-count {
+  color: #6c757d;
+  font-size: 10px;
+  font-style: italic;
+  white-space: nowrap;
 }
 
 </style>

@@ -40,14 +40,12 @@ export class StorageManager {
    */
   getDefaultPreferences() {
     return {
-      position: { x: 20, y: 20 },
+      position: { x: 20, y: 20 }, // 简化：使用简单的默认位置
       opacity: 0.95,
       isVisible: true,
-      isMinimized: false,
       theme: 'light',
       autoHide: false,
       showSearch: true,
-      expandedCategories: [],
       lastOpenTime: Date.now()
     };
   }

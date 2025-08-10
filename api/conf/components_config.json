@@ -343,7 +343,7 @@
       "description": "全市场涨幅大于5的股票日内涨幅",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true,
+      "enabled": false,
       "cache": {
         "strategy": "startup_once",
         "description": "只在服务器启动时计算一次"
@@ -364,7 +364,7 @@
       "description": "全市场涨幅大于9.7的股票日内涨幅",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true,
+      "enabled": false,
       "cache": {
         "strategy": "startup_once",
         "description": "只在服务器启动时计算一次"
@@ -385,7 +385,7 @@
       "description": "市场5分涨速大于3的股票日内涨幅",
       "source_data_keys": [],
       "source_data_logic": "",
-      "enabled": true,
+      "enabled": false,
       "cache": {
         "strategy": "startup_once",
         "description": "只在服务器启动时计算一次"
@@ -400,17 +400,34 @@
         "row": 2,
         "col": 0,
         "rowSpan": 0,
-        "colSpan": 6
+        "colSpan": 4
       },
-      "height": "3000px",
+      "height": "1000px",
       "description": "板块内股票日线涨幅",
       "source_data_keys": [],
       "source_data_logic": "",
       "enabled": true,
-      "cache": {
-        "strategy": "startup_once",
-        "description": "只在服务器启动时计算一次"
-      }
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute": {
+      "component_id": "plate_stocks_change_minute",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅",
+      "api_path": "/api/plate_stocks_change_minute",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 4
+      },
+      "height": "1200px",
+      "description": "板块内股票分钟涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "supportsSectorSelection": true
+      
     },
     "upLimitTable": {
       "component_id": "upLimitTable",
