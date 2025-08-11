@@ -1,5 +1,25 @@
 <template>
   <div class="table-component">
+    <!-- 表格标题栏 - 始终显示 -->
+    <div class="table-header">
+      <div class="table-title">{{ componentConfig.title || '数据表格' }}</div>
+      <div class="date-selector-group" v-if="showDatePicker">
+        <!-- 单日选择器 -->
+        <div class="single-date-selector" v-if="showDatePicker">
+          <div class="single-date-container">
+            <label>{{ datePickerLabel }}：</label>
+            <input 
+              type="date" 
+              v-model="selectedDate" 
+              @change="onSingleDateChange"
+              class="date-input"
+              :max="getCurrentDate()"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div v-if="loading" class="loading">加载中...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else class="table-wrapper">
@@ -60,6 +80,54 @@ export default defineComponent({
     // 排序相关状态
     const sortKey = ref('');
     const sortOrder = ref('asc'); // 'asc' 或 'desc'
+    
+    // 日期选择器相关状态
+    const selectedDate = ref(getCurrentDate());
+    
+    // 获取当前日期的函数
+    function getCurrentDate() {
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    }
+    
+    // 计算是否显示日期选择器
+    const showDatePicker = computed(() => {
+      return props.componentConfig && props.componentConfig.supports_date_picker === true;
+    });
+    
+    // 计算日期选择器标签
+    const datePickerLabel = computed(() => {
+      return props.componentConfig?.date_picker_label || '选择日期';
+    });
+    
+    // 数据源URL - 支持api_path和dataSource两种方式
+    const dataSourceUrl = computed(() => {
+      return props.componentConfig.dataSource || props.componentConfig.api_path;
+    });
+    
+    // 日期选择器变化处理
+    const onSingleDateChange = () => {
+      console.log('表格日期选择器变化:', selectedDate.value);
+      loadTableData();
+    };
+    
+    // 统一的数据加载方法
+    const loadTableData = () => {
+      const currentDataSource = dataSourceUrl.value;
+      if (currentDataSource) {
+        const url = new URL(currentDataSource);
+        
+        // 如果支持日期选择器且已选择日期，添加date参数
+        if (showDatePicker.value && selectedDate.value) {
+          url.searchParams.set('date', selectedDate.value);
+          console.log('添加date参数:', selectedDate.value);
+        }
+        
+        fetchData(url.toString());
+      } else {
+        fetchData();
+      }
+    };
     
     // 格式化单元格值
     const formatCellValue = (value) => {
@@ -747,7 +815,7 @@ export default defineComponent({
       loading.value = true;
       error.value = null;
       
-      const targetUrl = url || props.componentConfig.dataSource;
+      const targetUrl = url || dataSourceUrl.value;
       console.log('开始获取数据，URL:', targetUrl);
       
       try {
@@ -929,7 +997,7 @@ export default defineComponent({
       console.log(`⏱️ [${new Date().toISOString()}] 组件 ${props.componentConfig.id} 将在 ${componentDelay}ms 后开始加载数据`);
       
       setTimeout(() => {
-        fetchData();
+        loadTableData();
       }, componentDelay);
       
       // 设置全局函数（只在第一个组件时设置，避免重复覆盖）
@@ -1090,13 +1158,80 @@ export default defineComponent({
       renderStockLink,
       renderSectorNameCell,
       getCellBackgroundColor,
-      backgroundColorFunctions
+      backgroundColorFunctions,
+      // 日期选择器相关
+      showDatePicker,
+      selectedDate,
+      datePickerLabel,
+      dataSourceUrl,
+      onSingleDateChange,
+      loadTableData,
+      getCurrentDate
     };
   }
 });
 </script>
 
 <style scoped>
+/* 表格标题和日期选择器样式 */
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 2px;
+  min-height: 48px; /* 确保即使没有日期选择器也有一定高度 */
+}
+
+.table-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.date-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.single-date-selector {
+  display: flex;
+  align-items: center;
+}
+
+.single-date-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.single-date-container label {
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.date-input {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 14px;
+  min-width: 140px;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+}
+
 /* 保持原有样式 */
 .table-component {
   height: 100%;

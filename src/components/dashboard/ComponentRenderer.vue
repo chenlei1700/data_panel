@@ -1,8 +1,9 @@
 <template>
     <div class="component-container">
-      <div class="component-header">
+      <!-- 隐藏默认的灰色标题栏，因为图表组件内部已经有了更好看的蓝色渐变标题栏 -->
+      <!-- <div class="component-header">
         <h3>{{ componentConfig.title }}</h3>
-      </div>
+      </div> -->
       <div class="component-content">
         <component 
           :is="componentType" 
@@ -99,7 +100,8 @@
   
   .component-content {
     flex: 1;
+    height: 100%; /* 占满整个容器高度 */
     overflow: auto;
-    padding: 10px;
+    /* 移除了 padding，因为图表组件内部已经有了合适的布局 */
   }
   </style>

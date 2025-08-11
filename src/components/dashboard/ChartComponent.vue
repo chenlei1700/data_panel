@@ -1,9 +1,23 @@
 <template>
 <div class="chart-wrapper">
     <!-- 标题和选择器行 -->
-    <div class="chart-header" v-if="showSectorSelector && (sectorInfo?.availableSectors || dateRangeInfo?.availableDateRanges)">
+    <div class="chart-header">
       <div class="chart-title">{{ chartTitle || '图表' }}</div>
-      <div class="selector-group">
+      <div class="selector-group" v-if="showSectorSelector || showDatePicker">
+        <!-- 单日选择器 -->
+        <div class="single-date-selector" v-if="showDatePicker">
+          <div class="single-date-container">
+            <label>{{ datePickerLabel }}：</label>
+            <input 
+              type="date" 
+              v-model="selectedDate" 
+              @change="onSingleDateChange"
+              class="date-input"
+              :max="getCurrentDate()"
+            />
+          </div>
+        </div>
+        
         <!-- 日期范围选择器 -->
         <div class="date-selector" v-if="showSectorSelector">
           <div class="date-range-container">
@@ -102,17 +116,13 @@
       const customSectorName = ref('');
       const sectorInfo = ref(null);
       
-      // 图表标题 - 优先使用API返回的标题，其次使用配置中的标题，最后使用默认值
+      // 图表标题 - 只使用配置中的标题，不使用API返回的layout.title以避免重复
       const chartTitle = computed(() => {
-        // 1. 优先使用API响应中的动态标题
-        if (chartData.value && chartData.value.layout && chartData.value.layout.title) {
-          return chartData.value.layout.title;
-        }
-        // 2. 其次使用组件配置中的标题
+        // 使用组件配置中的标题
         if (props.componentConfig && props.componentConfig.title) {
           return props.componentConfig.title;
         }
-        // 3. 最后使用默认标题
+        // 使用默认标题
         return '图表';
       });
       
@@ -121,10 +131,29 @@
       const selectedEndDate = ref(getCurrentDate());
       const dateRangeInfo = ref(null);
       
+      // 单日选择器相关状态
+      const selectedDate = ref(getCurrentDate());
+      
       // 获取当前日期的方法
       function getCurrentDate() {
         return new Date().toISOString().split('T')[0];
       }
+      
+      // 计算是否显示单日选择器
+      const showDatePicker = computed(() => {
+        return props.componentConfig && props.componentConfig.supports_date_picker === true;
+      });
+      
+      // 计算日期选择器标签
+      const datePickerLabel = computed(() => {
+        return props.componentConfig?.date_picker_label || '选择日期';
+      });
+      
+      // 单日选择器变化处理
+      const onSingleDateChange = () => {
+        console.log('单日选择器变化:', selectedDate.value);
+        loadChartData();
+      };
       
       // 设置日期范围的快捷方法
       const setDateRange = (days) => {
@@ -327,7 +356,13 @@
             console.log('添加sector参数:', selectedSector.value);
           }
           
-          // 如果支持日期选择且已选择日期，添加日期参数
+          // 如果支持单日选择器且已选择日期，添加date参数
+          if (showDatePicker.value && selectedDate.value) {
+            urlObj.searchParams.set('date', selectedDate.value);
+            console.log('添加date参数:', selectedDate.value);
+          }
+          
+          // 如果支持日期范围选择且已选择日期，添加日期范围参数
           if (showSectorSelector.value && selectedStartDate.value) {
             urlObj.searchParams.set('startDate', selectedStartDate.value);
             console.log('添加startDate参数:', selectedStartDate.value);
@@ -448,7 +483,8 @@
         console.log('准备渲染的 traces:', traces);
         
         // 排序数据 - 按最后一个点的值从高到低
-        if (traces.length > 1) {
+        // 注意：堆叠条形图（barmode: "stack"）不应该排序，因为需要保持固定的堆叠顺序
+        if (traces.length > 1 && layoutConfig.barmode !== 'stack') {
           traces.sort((a, b) => {
             const lastAY = a.y && a.y.length > 0 ? a.y[a.y.length - 1] : 0;
             const lastBY = b.y && b.y.length > 0 ? b.y[b.y.length - 1] : 0; 
@@ -463,7 +499,7 @@
             margin: { 
                 l: 60,   // 左边距，为y轴标签留空间
                 r: 30,   // 右边距
-                t: 50,   // 顶部边距，为标题留空间
+                t: 50,   // 顶部边距，减少因为标题现在在外部
                 b: 120,  // 底部边距，为x轴标签留空间（增大以适应倾斜标签）
                 pad: 4
             },
@@ -492,7 +528,9 @@
                 ...layoutConfig.legend
             },
             // 后端配置会覆盖上面的默认配置
-            ...layoutConfig
+            ...layoutConfig,
+            // 移除图表内部标题，因为我们已经在上方有了优化的标题栏
+            title: undefined
             };
           // 响应式配置
         const config = {
@@ -616,13 +654,18 @@
         sectorInfo,
         onSectorChange,
         addCustomSector,
-        // 日期选择相关
+        // 日期范围选择相关
         selectedStartDate,
         selectedEndDate,
         dateRangeInfo,
         onDateRangeChange,
         getCurrentDate,
-        setDateRange
+        setDateRange,
+        // 单日选择器相关
+        showDatePicker,
+        selectedDate,
+        datePickerLabel,
+        onSingleDateChange
       };
     }
   });
@@ -645,26 +688,6 @@
   flex-direction: column;
 }
 
-/* 标题和选择器行 */
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 10px 15px;
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid #e9ecef;
-  gap: 20px;
-}
-
-.chart-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-  flex-grow: 1;
-  margin: 0;
-  line-height: 1.2;
-}
-
 /* 图表包装器样式 */
 .chart-wrapper {
   display: flex;
@@ -679,17 +702,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-height: 40px;
 }
 
 .chart-title {
   font-size: 16px;
   font-weight: 600;
-  color: #212529;
+  color: white;
   margin: 0;
   flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* 选择器组合样式 - 在标题行中 */
@@ -790,13 +816,59 @@
 /* 板块选择器样式 - 在标题行中使用 */
 .sector-selector {
   padding: 6px 10px;
-  background: rgba(248, 249, 250, 0.95);
-  border: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+/* 单日选择器样式 */
+.single-date-selector {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.single-date-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.single-date-container label {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 60px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.single-date-container input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 12px;
+  color: #495057;
+  min-width: 130px;
+}
+
+.single-date-container input[type="date"]:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.25);
 }
 
 .sector-select-group,
@@ -825,17 +897,20 @@
 
 .add-sector-btn {
   padding: 3px 8px;
-  background-color: #007bff;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
   color: white;
   border: none;
   border-radius: 4px;
   font-size: 11px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .add-sector-btn:hover {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, #ff5252 0%, #d63031 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .add-sector-btn:active {
@@ -845,13 +920,14 @@
 /* 日期选择器样式 - 在标题行中使用 */
 .date-selector {
   padding: 6px 10px;
-  background: rgba(248, 249, 250, 0.95);
-  border: 1px solid #e9ecef;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
 }
 
 .date-range-container {
@@ -868,20 +944,22 @@
 
 .date-input-group label {
   font-weight: 500;
-  color: #495057;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0;
   font-size: 11px;
   white-space: nowrap;
   min-width: 50px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .sector-selector label,
 .date-selector label {
   font-weight: 500;
-  color: #495057;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0;
   font-size: 12px;
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .sector-selector select,
@@ -914,17 +992,20 @@
 
 .date-shortcut-btn {
   padding: 2px 6px;
-  background-color: #6c757d;
+  background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
   color: white;
   border: none;
   border-radius: 3px;
   font-size: 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .date-shortcut-btn:hover {
-  background-color: #5a6268;
+  background: linear-gradient(135deg, #0984e3 0%, #0574c7 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .date-shortcut-btn:active {
@@ -932,10 +1013,11 @@
 }
 
 .sector-count {
-  color: #6c757d;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 10px;
   font-style: italic;
   white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 </style>

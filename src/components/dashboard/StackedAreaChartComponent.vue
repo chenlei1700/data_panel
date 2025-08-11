@@ -1,5 +1,10 @@
 <template>
   <div class="stacked-area-chart-wrapper">
+    <!-- 标题栏 -->
+    <div class="chart-header">
+      <div class="chart-title">{{ componentConfig.title || '堆叠面积图' }}</div>
+    </div>
+    
     <!-- 可选的上方表格 -->
     <div v-if="tableData && Object.keys(tableData).length > 0" class="table-header">
       <table class="data-table">
@@ -162,9 +167,10 @@ export default defineComponent({
         
         // 布局配置
         const layout = {
-          title: props.componentConfig.title || '堆叠面积图',
+          // 移除图表内部标题，因为我们已经在上方有了优化的标题栏
+          title: undefined,
           autosize: true,
-          margin: { l: 60, r: 30, t: 80, b: 60, pad: 4 },
+          margin: { l: 60, r: 30, t: 50, b: 60, pad: 4 }, // 减少顶部边距
           xaxis: {
             title: '时间/类别',
             autorange: true,
@@ -505,6 +511,28 @@ export default defineComponent({
   height: 100%;
   min-height: 400px;
   overflow: hidden;
+}
+
+/* 图表头部样式 */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-height: 40px;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .table-header {

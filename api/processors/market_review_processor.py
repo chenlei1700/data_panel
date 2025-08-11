@@ -518,13 +518,123 @@ class MarketReviewProcessor(BaseDataProcessor):
             }
         })
     
-    def _process_lianban_data_for_heatmap(self, sector_data):
+    def process_sector_lianban_distribution_kpl(self):
+        """板块连板数分布图 - 支持动态板块选择和日期范围选择"""
+        from flask import request
+        selected_sector = request.args.get('sector', None)
+        start_date = request.args.get('startDate', '2025-07-01')
+        end_date = request.args.get('endDate', None)
+        
+        return self._original_sector_lianban_distribution_kpl(selected_sector, start_date, end_date)
+
+    def _original_sector_lianban_distribution_kpl(self, selected_sector=None, start_date='2025-07-01', end_date=None):
+        """板块连板数分布图 - 原始实现"""
+        import pandas as pd
+        from datetime import datetime, timedelta
+        
+        # 将开始日期转换为datetime类型
+        start_date_dt = pd.to_datetime(start_date, errors='coerce')
+        # d = NightFactorData()
+        d = KplUpLimitData()
+        df = d.get_daily_data(start_date=start_date)
+        df['trade_date'] = pd.to_datetime(df['trade_date'], errors='coerce')
+
+        # 确定结束日期
+        # 确定实际的开始和结束日期
+        if end_date is None or df['trade_date'].max() < pd.to_datetime(end_date, errors='coerce'):
+            # 如果没有指定结束日期，使用最新日期
+            latest_date = df['trade_date'].max()
+        else:
+            # 使用指定的结束日期
+            latest_date = pd.to_datetime(end_date, errors='coerce')
+        
+        # TODO: 这里你需要实现从 factor.night_factor 表获取数据的逻辑
+        # 期望的数据结构应该包含以下字段：
+        # - trade_date: 交易日期
+        # - sector: 板块名称  
+        # - stock_name: 股票名称
+        # - lian_ban_shu: 连板数
+        
+        df = df[(df['trade_date'] >= start_date_dt) & (df['trade_date'] <= latest_date)]
+        
+        
+        # 获取可用板块列表 - 你需要替换为实际的板块获取逻辑
+        available_sectors = df['up_limit_reason'].unique().tolist()
+        
+        # 如果没有指定板块，使用第一个板块
+        if selected_sector is None:
+            selected_sector = available_sectors[0] if available_sectors else "无板块"
+        
+        # 筛选指定板块的数据
+        sector_data = df[df['up_limit_reason'] == selected_sector].copy()
+
+        if sector_data.empty:
+            return jsonify({
+                "chartType": "heatmap", 
+                "data": [],
+                "layout": {"title": f"板块 {selected_sector} 无连板数据"},
+                "sectorInfo": {
+                    "currentSector": selected_sector,
+                    "availableSectors": available_sectors,
+                    "sectorCount": len(available_sectors)
+                },
+                "dateRangeInfo": {
+                    "currentStartDate": start_date_dt.strftime('%Y-%m-%d'),
+                    "currentEndDate": latest_date.strftime('%Y-%m-%d')
+                }
+            })
+        
+        # 处理连板数据
+        lianban_data = self._process_lianban_data_for_heatmap(sector_data, kpl=True)
+        
+        # 生成热力图数据
+        chart_data = self._generate_lianban_heatmap_chart(lianban_data, start_date_dt, latest_date)
+        
+        return jsonify({
+            "chartType": "heatmap",
+            "data": chart_data["data"],
+            "layout": {
+                "title": f"板块连板数分布 - {selected_sector} ({start_date_dt.strftime('%Y-%m-%d')} 至 {latest_date.strftime('%Y-%m-%d')})",
+                "xaxis": {
+                    "title": "日期", 
+                    "side": "bottom",
+                    "tickangle": -45,
+                    "automargin": True,
+                    "type": "category",  # 明确指定为分类轴
+                    "categoryorder": "array",  # 按数组顺序排列
+                    "categoryarray": chart_data.get("date_strings", [])  # 使用返回的日期字符串数组
+                },
+                "yaxis": {
+                    "title": "连板数", 
+                    "side": "left"
+                },
+                "colorscale": "Viridis",
+                "showscale": True,
+                "height": 1000,  # 增大固定高度以容纳动态行高
+                "margin": {"l": 120, "r": 50, "t": 80, "b": 120},
+                **chart_data["layout"]
+            },
+            "sectorInfo": {
+                "currentSector": selected_sector,
+                "availableSectors": available_sectors,
+                "sectorCount": len(available_sectors)
+            },
+            "dateRangeInfo": {
+                "currentStartDate": start_date_dt.strftime('%Y-%m-%d'),
+                "currentEndDate": latest_date.strftime('%Y-%m-%d')
+            }
+        })
+    
+    def _process_lianban_data_for_heatmap(self, sector_data,kpl=False):
         """处理连板数据，按日期和连板数分组"""
         lianban_dict = {}
         
         for _, row in sector_data.iterrows():
             date_str = row['trade_date'].strftime('%m%d')  # 改为0701格式
-            lianban_days = int(row.get('lian_ban_shu', 1))  # 从night_factor表的lian_ban_shu字段获取
+            if kpl:
+                lianban_days = int(row.get('up_limit_count', 1))
+            else:
+                lianban_days = int(row.get('lian_ban_shu', 1))  # 从night_factor表的lian_ban_shu字段获取
             stock_name = row.get('stock_name', '未知股票')
             
             if date_str not in lianban_dict:
@@ -2048,13 +2158,17 @@ class MarketReviewProcessor(BaseDataProcessor):
             return self.error_response(f"获取涨停数据失败: {e}")
 
     def process_up_limit_stocks_review(self):
-        """返回涨停数据表 - 带启动缓存"""
-        return self._process_with_startup_cache('/api/up_limit_stocks_review', self._original_up_limit_stocks_review)
+        """返回涨停数据表 - 支持日期参数，不使用缓存"""
+        return self._original_up_limit_stocks_review()
 
     def _original_up_limit_stocks_review(self):
         """返回涨停数据表"""
         
         try:
+            # 获取时间参数，默认为今天
+            from flask import request
+            selected_date = request.args.get('date', '2025-07-25')  # 期望格式：YYYY-MM-DD
+            
             d = KplUpLimitData()
             up_limit_df = d.get_daily_data(start_date='2025-07-01')
             
@@ -2065,9 +2179,23 @@ class MarketReviewProcessor(BaseDataProcessor):
                     "message": "涨停数据文件读取失败"
                 })
             
-            # 获取最新的日期的行
+            # 时间过滤逻辑
             up_limit_df['trade_date'] = pd.to_datetime(up_limit_df['trade_date'])
-            up_limit_df = up_limit_df[up_limit_df['trade_date'].dt.date == up_limit_df['trade_date'].dt.date.max()]
+            
+            if selected_date:
+               
+                target_date = pd.to_datetime(selected_date).date()
+                # 如果日期不存在，使用最新日期的数据
+                if target_date not in up_limit_df['trade_date'].dt.date.unique():
+                    self.logger.warning(f"指定日期 {target_date} 不存在，使用最新日期的数据")
+                    up_limit_df = up_limit_df[up_limit_df['trade_date'].dt.date == up_limit_df['trade_date'].dt.date.max()]
+                # 过滤指定日期的数据
+                else:
+                    up_limit_df = up_limit_df[up_limit_df['trade_date'].dt.date == target_date]
+            else:
+                # 获取最新的日期的行
+                up_limit_df = up_limit_df[up_limit_df['trade_date'].dt.date == up_limit_df['trade_date'].dt.date.max()]
+                
             # 将trade_date改为月日的格式
             up_limit_df['trade_date'] = up_limit_df['trade_date'].dt.strftime('%m-%d')
             # 将up_limit_amount，famc列转换为亿元为单位
@@ -2115,7 +2243,141 @@ class MarketReviewProcessor(BaseDataProcessor):
         
         except Exception as e:
             return self.error_response(f"获取涨停数据失败: {e}")
+
+    def process_upLimitStocksDist_v2(self):
+        """返回涨停数据表 - 带启动缓存"""
+        return self._process_with_startup_cache('/api/upLimitStocksDist_v2', self._original_upLimitStocksDist_v2)
+
+    def _original_upLimitStocksDist_v2(self):
+        """返回涨停数据表"""
         
+        try:
+            d = KplUpLimitData()
+            up_limit_df = d.get_daily_data(start_date='2025-07-01')
+            
+            if up_limit_df.empty:
+                return jsonify({
+                    "columns": [],
+                    "rows": [],
+                    "message": "涨停数据文件读取失败"
+                })
+            
+            # 获取最新的日期的行
+            up_limit_df['trade_date'] = pd.to_datetime(up_limit_df['trade_date'])
+            # 将trade_date改为月日的格式
+            up_limit_df['trade_date'] = up_limit_df['trade_date'].dt.strftime('%m-%d')
+            # 将up_limit_amount，famc列转换为亿元为单位
+            up_limit_df['up_limit_amount'] = up_limit_df['up_limit_amount'] / 1e8
+            up_limit_df['famc'] = up_limit_df['famc'] / 1e8
+
+            # 对trade_date进行分组，提取板块列中的所有板块名，板块列中的值是以逗号分隔的字符串，统计每个板块名当日出现的次数
+            # 做成一个新的DataFrame，包含trade_date和板块名两列
+            sector_count_data = []
+            for trade_date, group in up_limit_df.groupby('trade_date'):
+                for _, row in group.iterrows():
+                    if pd.notna(row['sector']) and row['sector']:  # 确保板块列不为空
+                        # 分割逗号分隔的板块字符串
+                        sectors = [sector.strip() for sector in str(row['up_limit_reason']).split('、') if sector.strip()]
+                        for sector in sectors:
+                            if sector != '其他':
+                                sector_count_data.append({
+                                    'trade_date': trade_date,
+                                    'sector_name': sector
+                                })
+            
+            # 创建板块统计DataFrame
+            sector_df = pd.DataFrame(sector_count_data)
+            if not sector_df.empty:
+                # 按日期和板块名分组统计次数
+                sector_count_df = sector_df.groupby(['trade_date', 'sector_name']).size().reset_index(name='count')
+                
+                # 整理成以trade_date为列，板块名为行，count为值的新的DataFrame
+                sector_pivot_df = sector_count_df.pivot(index='sector_name', columns='trade_date', values='count')
+                # 填充NaN值为0
+                sector_pivot_df = sector_pivot_df.fillna(0).astype(int)
+                
+                # 对sector_count_df排序，获取最新的5个日期，按板块名分组计算count合计，获取排序顺序
+                if not sector_count_df.empty:
+                    # 获取最新的5个交易日期
+                    latest_dates = sorted(sector_count_df['trade_date'].unique(), reverse=True)[:5]
+                    
+                    # 筛选最新5个日期的数据并按板块分组求和
+                    recent_sector_totals = (sector_count_df[sector_count_df['trade_date'].isin(latest_dates)]
+                                           .groupby('sector_name')['count'].sum()
+                                           .sort_values(ascending=False))  # 按count总和降序排列
+                    
+                    # 获取排序后的板块名顺序
+                    sector_order = recent_sector_totals.index.tolist()
+                    
+                    # 重新排列sector_pivot_df的行顺序，只包含存在的板块
+                    existing_sectors = [sector for sector in sector_order if sector in sector_pivot_df.index]
+                    sector_pivot_df = sector_pivot_df.reindex(existing_sectors)
+                    
+                    # 添加total列，统计每个板块的count总数
+                    sector_pivot_df['total'] = sector_pivot_df.sum(axis=1)
+            else:
+                # 如果没有数据，创建空的DataFrame
+                sector_count_df = pd.DataFrame(columns=['trade_date', 'sector_name', 'count'])
+                sector_pivot_df = pd.DataFrame()
+            
+            # 为sector_pivot_df动态定义列 - 高效方法
+            if not sector_pivot_df.empty:
+                # 动态生成日期列
+                date_columns = []
+                for date_col in sector_pivot_df.columns:
+                    if date_col != 'total':  # 排除total列
+                        date_columns.append({
+                            "field": date_col,
+                            "header": f"25{date_col}",  # 添加年份前缀
+                            "backgroundColor": "redGreen"  # 日期列使用redGreen颜色
+                        })
+                
+                # 构建完整的sector列定义
+                sector_columns = [
+                    {"field": "sector_name", "header": "板块名称"}  # 板块名称列
+                ] + date_columns + [
+                    {"field": "total", "header": "总计", "backgroundColor": "redGreen"}  # 总计列
+                ]
+            else:
+                sector_columns = []
+
+            # 为sector_pivot_df准备数据 - 将索引转为列
+            if not sector_pivot_df.empty:
+                # 将索引(sector_name)转为列
+                sector_pivot_df_with_names = sector_pivot_df.reset_index()
+            else:
+                sector_pivot_df_with_names = pd.DataFrame()
+            
+            valid_columns = [col for col in sector_columns if col["field"] in sector_pivot_df_with_names.columns]
+            
+            rows = []
+            for _, row_data in sector_pivot_df_with_names.iterrows():
+                row = {}
+                for col in valid_columns:
+                    field = col["field"]
+                    value = row_data[field]
+                    
+                    # 处理不同数据类型的JSON序列化
+                    if isinstance(value, (float, np.float64, np.float32)):
+                        value = round(value, 2)
+                    elif isinstance(value, (int, np.int64, np.int32)):
+                        value = int(value)  # 转换为Python原生int类型
+                    
+                    row[field] = value
+                
+                rows.append(row)
+            
+            # 构建响应数据
+            response_data = jsonify({
+                "columns": valid_columns,
+                "rows": rows
+            })
+            
+            return response_data
+        
+        except Exception as e:
+            return self.error_response(f"获取涨停数据失败: {e}")
+           
     def process_up_limit(self):
         """涨停数据表 - 带启动缓存"""
         return self._process_with_startup_cache('/api/up_limit', self._original_up_limit)
@@ -2666,33 +2928,80 @@ class MarketReviewProcessor(BaseDataProcessor):
             
     def process_today_plate_up_limit_distribution(self):
         """
-        获取今日各板块连板数分布（板块内股票日线涨幅分布） - 带启动缓存
+        获取指定日期各板块连板数分布（板块内股票日线涨幅分布） - 带启动缓存
         横轴为板块名称，纵轴为股票个数
         分别用堆积图展示各板块的连板数分布，从下往上为1板，2板，3板等
+        
+        参数:
+        - date: 可选，格式为YYYY-MM-DD，如：2024-07-21。不提供则使用今日数据
+        
+        用法示例:
+        - /api/today_plate_up_limit_distribution (使用今日数据)
+        - /api/today_plate_up_limit_distribution?date=2024-07-21 (使用指定日期数据)
         """
-        return self._process_with_startup_cache('/api/today_plate_up_limit_distribution', self._original_today_plate_up_limit_distribution)
+        return self._original_today_plate_up_limit_distribution()
     
     def _original_today_plate_up_limit_distribution(self):
         """
         获取今日各板块连板数分布
         横轴为板块名称，纵轴为股票个数
         分别用堆积图展示各板块的连板数分布，从下往上为1板，2板，3板等
+        支持时间选择功能，可以指定某一天的数据
         """
         try:
-            stock_all_level_df = self.data_cache.load_data('stock_all_level_df')
+            # 获取时间参数，默认为今天
+            from flask import request
+            selected_date = request.args.get('date','2025-07-25')  # 期望格式：YYYY-MM-DD
+            d= NightFactorData()
+            stock_all_level_df = d.get_daily_data()
+            
             if stock_all_level_df.empty:
                 return self.error_response("股票连板数据文件读取失败")
             
+            # 时间过滤逻辑
+            if selected_date:
+                try:
+                    # 将字符串日期转换为datetime对象
+                    target_date = pd.to_datetime(selected_date).date()
+                    
+                    # 确保trade_date列是datetime类型
+                    if 'trade_date' in stock_all_level_df.columns:
+                        stock_all_level_df['trade_date'] = pd.to_datetime(stock_all_level_df['trade_date'])
+                        # 如果target_date在数据中不存在，返回最大日期的数据
+                        if target_date not in stock_all_level_df['trade_date'].dt.date.unique():
+                            target_date = stock_all_level_df['trade_date'].dt.date.max()
+                            selected_date = target_date.strftime('%Y-%m-%d')
+
+                        stock_all_level_df = stock_all_level_df[stock_all_level_df['trade_date'].dt.date == target_date]
+                        
+                        if stock_all_level_df.empty:
+                            return self.error_response(f"指定日期 {selected_date} 没有数据")
+                    else:
+                        # 如果没有trade_date列，使用今天的数据（默认行为）
+                        pass
+                        
+                except Exception as date_error:
+                    return self.error_response(f"日期格式错误: {date_error}，请使用YYYY-MM-DD格式")
+            
             # 过滤掉不需要的板块
-            stock_all_level_df = stock_all_level_df[~stock_all_level_df['Sector'].str.contains("沪股通|深股通|季报|融资融券", na=False)]
-            stock_all_level_df = stock_all_level_df[stock_all_level_df['连板数'] > 0]
+            stock_all_level_df = stock_all_level_df[~stock_all_level_df['sector'].str.contains("沪股通|深股通|季报|融资融券", na=False)]
+            stock_all_level_df = stock_all_level_df[stock_all_level_df['lian_ban_shu'] > 0]
            
-            stock_all_level_df['Level'] = stock_all_level_df['连板数']
+            stock_all_level_df['Level'] = stock_all_level_df['lian_ban_shu']
             # 将连板数转换为整数，处理异常值
             stock_all_level_df['Level'] = pd.to_numeric(stock_all_level_df['Level'], errors='coerce').fillna(0).astype(int)
 
             # 按照板块分组，统计每个板块的连板数分布
-            sector_level_stats = stock_all_level_df.groupby(['Sector', 'Level']).size().unstack(fill_value=0)
+            sector_level_stats = stock_all_level_df.groupby(['sector', 'Level']).size().unstack(fill_value=0)
+            
+            # 同时获取每个板块每个连板数对应的股票列表，用于hover显示
+            sector_stock_lists = {}
+            for sector in stock_all_level_df['sector'].unique():
+                sector_stock_lists[sector] = {}
+                sector_data = stock_all_level_df[stock_all_level_df['sector'] == sector]
+                for level in sector_data['Level'].unique():
+                    level_data = sector_data[sector_data['Level'] == level]
+                    sector_stock_lists[sector][level] = level_data['stock_name'].tolist() if 'stock_name' in level_data.columns else level_data['code'].tolist()
             
             # 获取所有的连板数等级
             max_level = min(stock_all_level_df['Level'].max(), 10)  # 限制最大连板数为10，避免过多分类
@@ -2708,30 +3017,86 @@ class MarketReviewProcessor(BaseDataProcessor):
             
             # 计算每个板块的总股票数，按总数排序，只显示前20个板块
             sector_level_stats['total'] = sector_level_stats.sum(axis=1)
-            sector_level_stats = sector_level_stats.sort_values('total', ascending=False).head(20)
+            top_sectors = sector_level_stats.sort_values('total', ascending=False).head(20).index.tolist()
+            sector_level_stats = sector_level_stats.loc[top_sectors]
             sector_level_stats = sector_level_stats.drop('total', axis=1)
             
             # 构建堆积图数据 - 使用与其他图表一致的格式
             categories = sector_level_stats.index.tolist()  # 板块名称作为横坐标
             chart_data = []
             
-            # 为每个连板数等级创建一个系列
-            colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#F1948A', '#D5DBDB', '#A569BD', '#F0B27A']
+            # 为每个连板数等级创建一个系列 - 使用冷色到暖色的渐变
+            # 1连板：深蓝色（最冷） -> 高连板：深红色（最暖）
+            colors = [
+                '#1E3A8A',  # 1连板 - 深蓝色
+                '#0D9488',  # 2连板 - 蓝色
+                '#CA8A04',  # 3连板 - 青绿色  
+                "#F17676",  # 4连板 - 绿色
+                '#DC2626',  # 5连板 - 金黄色
+                '#7C2D12',  # 6连板 - 橙色
+                '#450A0A',  # 7连板 - 红色
+                '#450A0A',  # 8连板 - 深红色
+                "#450A0A",  # 9连板 - 棕红色
+                '#450A0A'   # 10连板+ - 深褐红色
+            ]
             
             for i, level in enumerate(level_columns):
+                # 为每个板块构建该连板数的数据和hover信息
+                y_values = []
+                hover_texts = []
+                
+                for sector in categories:
+                    stock_count = sector_level_stats.loc[sector, level]
+                    # 转换为Python原生int类型，避免JSON序列化问题
+                    stock_count = int(stock_count)
+                    y_values.append(stock_count)
+                    
+                    # 构建hover文本
+                    if stock_count > 0 and sector in sector_stock_lists and level in sector_stock_lists[sector]:
+                        stock_list = sector_stock_lists[sector][level]
+                        # 限制显示的股票数量，避免hover太长
+                        if len(stock_list) > 10:
+                            stock_display = stock_list[:10] + [f"...等{len(stock_list)}只股票"]
+                        else:
+                            stock_display = stock_list
+                        
+                        stock_text = '<br>'.join([f'• {stock}' for stock in stock_display])
+                        hover_text = f'{sector}<br>{level}连板: {stock_count}只<br><br>股票列表:<br>{stock_text}'
+                    else:
+                        hover_text = f'{sector}<br>{level}连板: {stock_count}只'
+                    
+                    hover_texts.append(hover_text)
+                
                 chart_data.append({
                     'name': f'{level}连板',
                     'x': categories,  # 板块名称
-                    'y': sector_level_stats[level].tolist(),  # 对应的股票个数
+                    'y': y_values,  # 对应的股票个数
                     'type': 'bar',  # 柱状图类型
-                    'marker': {'color': colors[i % len(colors)]}
+                    'marker': {'color': colors[i % len(colors)]},
+                    'text': hover_texts,  # hover显示的文本
+                    'hovertemplate': '%{text}<extra></extra>',  # 使用自定义hover模板
+                    'hoverlabel': {
+                        'bgcolor': 'rgba(30, 30, 30, 0.9)',  # 深灰色半透明背景
+                        'bordercolor': 'white',               # 白色边框
+                        'font': {
+                            'color': 'white',                 # 白色字体
+                            'size': 24,                       # 字体大小
+                            'family': 'Arial, sans-serif'    # 字体家族
+                        }
+                    }
                 })
+            
+            # 构建动态标题
+            if selected_date:
+                chart_title = f"各板块连板数分布 ({selected_date})"
+            else:
+                chart_title = "各板块连板数分布 (今日)"
             
             return jsonify({
                 "chartType": "bar",  # 柱状图
                 "data": chart_data,  # 图表数据
                 "layout": {
-                    "title": "各板块连板数分布",
+                    "title": chart_title,
                     "xaxis": {"title": "板块名称"},
                     "yaxis": {"title": "股票个数"},
                     "barmode": "stack",  # 堆积模式
@@ -2765,6 +3130,22 @@ class MarketReviewProcessor(BaseDataProcessor):
             # 按照板块分组，统计每个板块的连板数分布
             sector_level_stats = stock_all_level_df.groupby(['Sector', 'Level']).size().unstack(fill_value=0)
             
+            # 同时获取每个板块每个连板数对应的股票列表，用于hover显示
+            sector_stock_lists_v2 = {}
+            for sector in stock_all_level_df['Sector'].unique():
+                sector_stock_lists_v2[sector] = {}
+                sector_data = stock_all_level_df[stock_all_level_df['Sector'] == sector]
+                for level in sector_data['Level'].unique():
+                    level_data = sector_data[sector_data['Level'] == level]
+                    # 优先使用stock_name，如果没有则使用code
+                    if 'stock_name' in level_data.columns:
+                        sector_stock_lists_v2[sector][level] = level_data['stock_name'].tolist()
+                    elif 'code' in level_data.columns:
+                        sector_stock_lists_v2[sector][level] = level_data['code'].tolist()
+                    else:
+                        # 如果都没有，尝试使用索引
+                        sector_stock_lists_v2[sector][level] = level_data.index.tolist()
+            
             # 获取所有的连板数等级
             max_level = min(stock_all_level_df['Level'].max(), 6)  # 限制最大连板数为6，适合堆叠面积图
             level_columns = list(range(1, max_level + 1))
@@ -2785,7 +3166,8 @@ class MarketReviewProcessor(BaseDataProcessor):
             for idx, total in sector_level_stats['total_stocks'].items():
                 self.logger.info(f"  {idx}: {total}只")
             
-            sector_level_stats = sector_level_stats.sort_values('total_stocks', ascending=False).head(15)
+            top_sectors_v2 = sector_level_stats.sort_values('total_stocks', ascending=False).head(15).index.tolist()
+            sector_level_stats = sector_level_stats.loc[top_sectors_v2]
             
             # 添加调试信息
             self.logger.info("排序后的板块顺序和总股票数:")
@@ -2813,21 +3195,38 @@ class MarketReviewProcessor(BaseDataProcessor):
                     sector_data[key] = value
                     total_stocks += value
                     
-                    # 始终获取该板块该连板等级的股票名称列表
-                    level_stocks = stock_all_level_df[
-                        (stock_all_level_df['Sector'] == sector_name) & 
-                        (stock_all_level_df['Level'] == level)
-                    ]['stock_name'].tolist()
+                    # 使用预构建的股票列表数据
+                    if sector_name in sector_stock_lists_v2 and level in sector_stock_lists_v2[sector_name]:
+                        level_stocks = sector_stock_lists_v2[sector_name][level]
+                    else:
+                        level_stocks = []
                     
-                    sector_hover[key] = level_stocks
+                    # 构建hover显示文本
+                    if len(level_stocks) > 0:
+                        # 限制显示的股票数量，避免hover太长
+                        if len(level_stocks) > 8:
+                            stock_display = level_stocks[:8] + [f"...等{len(level_stocks)}只股票"]
+                        else:
+                            stock_display = level_stocks
+                        sector_hover[key] = stock_display
+                    else:
+                        sector_hover[key] = []
                 
                 data[sector_name] = sector_data
                 table_data[sector_name] = f"{total_stocks}只"
                 hover_data[sector_name] = sector_hover
             
-            # 定义连板数类型的顺序和颜色
+            # 定义连板数类型的顺序和颜色 - 使用冷色到暖色的渐变
             keyOrder = [f"{level}连板" for level in level_columns]
-            colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'][:len(level_columns)]
+            # 1连板：深蓝色（最冷） -> 高连板：深红色（最暖）
+            colors = [
+                '#1E3A8A',  # 1连板 - 深蓝色
+                '#1E40AF',  # 2连板 - 蓝色
+                '#0D9488',  # 3连板 - 青绿色  
+                '#059669',  # 4连板 - 绿色
+                '#CA8A04',  # 5连板 - 金黄色
+                '#EA580C'   # 6连板 - 橙色
+            ][:len(level_columns)]
             
             # 构建返回数据，始终包含悬浮数据
             return jsonify({

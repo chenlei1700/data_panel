@@ -173,8 +173,10 @@
     "plate_sector": {
       "component_id": "plate_sector",
       "component_type": "chart",
-      "title": "今日各板块连板数分布",
+      "title": "各板块连板数分布",
       "api_path": "/api/today_plate_up_limit_distribution",
+      "supports_date_picker": true,
+      "date_picker_label": "选择日期",
       "position": {
         "row": 6,
         "col": 0,
@@ -182,7 +184,7 @@
         "colSpan": 4
       },
       "height": "700px",
-      "description": "今日各板块连板数分布",
+      "description": "指定日期各板块连板数分布",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
       "enabled": true
@@ -191,8 +193,10 @@
     "plate_sector_v2": {
       "component_id": "plate_sector_v2",
       "component_type": "stackedAreaChart",
-      "title": "今日各板块连板数分布(面积图)",
+      "title": "各板块连板数分布(面积图)",
       "api_path": "/api/today_plate_up_limit_distribution_v2",
+      "supports_date_picker": true,
+      "date_picker_label": "选择日期",
       "position": {
         "row": 7,
         "col": 0,
@@ -200,10 +204,10 @@
         "colSpan": 4
       },
       "height": "700px",
-      "description": "今日各板块连板数分布(堆叠面积图)",
+      "description": "指定日期各板块连板数分布(堆叠面积图)",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
-      "enabled": true
+      "enabled": false
     }
   },
   "market_review": {
@@ -231,7 +235,7 @@
       },
       "板块分析": {
         "order": 4,
-        "components": ["plate_sector", "plate_sector_v2", "upLimitStocksReview", "plate_change", "sector_lianban_distribution"],
+        "components": ["plate_sector", "upLimitStocksReview", "plate_change", "sector_lianban_distribution"],
         "icon": "🏢",
         "collapsible": true,
         "description": "板块连板分布分析"
@@ -455,6 +459,8 @@
       "component_type": "table",
       "title": "涨停股票复盘",
       "api_path": "/api/up_limit_stocks_review",
+      "supports_date_picker": true,
+      "date_picker_label": "选择日期",
       "position": {
         "row": 8,
         "col": 0,
@@ -463,6 +469,23 @@
       },
       "height": "4000px",
       "description": "涨停股票复盘",
+      "source_data_keys": [""],
+      "source_data_logic": "",
+      "enabled": true
+    },
+    "upLimitStocksDist_v2": {
+      "component_id": "upLimitStocksDist_v2",
+      "component_type": "table",
+      "title": "各板块每日涨停数",
+      "api_path": "/api/upLimitStocksDist_v2",
+      "position": {
+        "row": 15,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 5
+      },
+      "height": "2000px",
+      "description": "各板块每日涨停数",
       "source_data_keys": [""],
       "source_data_logic": "",
       "enabled": true,
@@ -474,30 +497,30 @@
     "plate_sector": {
       "component_id": "plate_sector",
       "component_type": "chart",
-      "title": "今日各板块连板数分布",
+      "title": "各板块连板数分布",
       "api_path": "/api/today_plate_up_limit_distribution",
+      "supports_date_picker": true,
+      "date_picker_label": "选择日期",
       "position": {
         "row": 6,
         "col": 0,
         "rowSpan": 1,
-        "colSpan": 4
+        "colSpan": 5
       },
-      "height": "700px",
-      "description": "今日各板块连板数分布",
+      "height": "1300px",
+      "description": "指定日期各板块连板数分布",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
-      "enabled": true,
-      "cache": {
-        "strategy": "startup_once",
-        "description": "只在服务器启动时计算一次"
-      }
+      "enabled": true
     },
     
     "plate_sector_v2": {
       "component_id": "plate_sector_v2",
       "component_type": "stackedAreaChart",
-      "title": "今日各板块连板数分布(面积图)",
+      "title": "各板块连板数分布(面积图)",
       "api_path": "/api/today_plate_up_limit_distribution_v2",
+      "supports_date_picker": true,
+      "date_picker_label": "选择日期",
       "position": {
         "row": 7,
         "col": 0,
@@ -505,14 +528,10 @@
         "colSpan": 4
       },
       "height": "700px",
-      "description": "今日各板块连板数分布(堆叠面积图)",
+      "description": "指定日期各板块连板数分布(堆叠面积图)",
       "source_data_keys": ["stock_all_level_df"],
       "source_data_logic": "plate_sector_source_data",
-      "enabled": true,
-      "cache": {
-        "strategy": "startup_once",
-        "description": "只在服务器启动时计算一次"
-      }
+      "enabled": false
     },
     
     "sector_lianban_distribution": {
@@ -533,7 +552,24 @@
       "enabled": true,
       "supportsSectorSelection": true
     },
-    
+    "sector_lianban_distribution_kpl": {
+      "component_id": "sector_lianban_distribution_kpl",
+      "component_type": "chart",
+      "title": "板块连板数分布图_KPL",
+      "api_path": "/api/sector_lianban_distribution_kpl",
+      "position": {
+        "row": 16,
+        "col": 0,
+        "rowSpan": 1,
+        "colSpan": 4
+      },
+      "height": "800px",
+      "description": "显示某板块在指定时间段内的连板数分布，横轴为日期，纵轴为连板数，每个格子内显示对应连板数的股票名称",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "supportsSectorSelection": true
+    },
     "all_market_change_dist": {
       "component_id": "all_market_change_dist",
       "component_type": "stackedAreaChart",
