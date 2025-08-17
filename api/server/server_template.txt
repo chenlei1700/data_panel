@@ -197,6 +197,9 @@ class {class_name}StockServer(BaseStockServer, SourceDataLogicMixin):
             components = self.component_manager.components
             self.logger.info(f"获取到 {{len(components)}} 个组件配置")
             
+            # 用于跟踪已注册的API路径，避免重复注册
+            registered_api_paths = set()
+            
             # 为每个组件的API路径注册路由
             registered_count = 0
             for component_id, component_config in components.items():
@@ -208,6 +211,11 @@ class {class_name}StockServer(BaseStockServer, SourceDataLogicMixin):
                     continue  # 跳过未启用的组件
                 
                 api_path = component_config.api_path
+                
+                # 如果这个API路径已经注册过，跳过重复注册
+                if api_path in registered_api_paths:
+                    self.logger.info(f"跳过重复的API路径: {{api_path}} (组件: {{component_id}})")
+                    continue
                 
                 # 从 api_path 提取方法名
                 if api_path.startswith('/api/'):
@@ -230,10 +238,13 @@ class {class_name}StockServer(BaseStockServer, SourceDataLogicMixin):
                     methods=['GET', 'POST']
                 )
                 
+                # 记录已注册的API路径
+                registered_api_paths.add(api_path)
+                
                 self.logger.info(f"已注册路由: {{api_path}} -> {{method_name}}")
                 registered_count += 1
             
-            self.logger.info(f"配置驱动路由注册完成，共注册 {{registered_count}} 个路由")
+            self.logger.info(f"配置驱动路由注册完成，共注册 {{registered_count}} 个路由，跳过 {{len(components) - registered_count}} 个重复或禁用的组件")
            
         
         # 注册SSE和更新相关路由
