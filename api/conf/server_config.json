@@ -29,6 +29,17 @@
         "heartbeat_interval": 30
       }
     },
+    "market_realtime": {
+      "port": 5009,
+      "name": "实时市场数据",
+      "auto_update": {
+        "enabled": true,
+        "interval": 25,
+        "random_selection": true,
+        "max_clients": 30,
+        "heartbeat_interval": 30
+      }
+    },
     "demo": {
       "port": 5004,
       "name": "演示股票仪表盘",

@@ -46,6 +46,19 @@
       "component": "StockDashboard",
       "taskLabel": "复盘页面服务器",
       "enabled": true
+    },
+    {
+      "id": "market_realtime",
+      "name": "实时市场",
+      "description": "实时市场数据",
+      "icon": "📊",
+      "port": 5009,
+      "path": "/market_realtime",
+      "title": "实时市场",
+      "serverFile": "realtime_market_server.py",
+      "component": "StockDashboard",
+      "taskLabel": "实时市场服务器",
+      "enabled": true
     }
   ],
   "apiEndpoints": {

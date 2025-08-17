@@ -65,13 +65,29 @@
             </div>
             <div class="sector-input-group">
               <label>或输入板块：</label>
-              <input 
-                type="text" 
-                v-model="customSectorName" 
-                placeholder="请输入板块名称"
-                class="sector-input"
-                @keyup.enter="addCustomSector"
-              />
+              <div class="autocomplete-container">
+                <input 
+                  type="text" 
+                  v-model="customSectorName" 
+                  placeholder="请输入板块名称进行搜索"
+                  class="sector-input"
+                  @keyup.enter="addCustomSector"
+                  @input="onSectorInput"
+                  @focus="onInputFocus"
+                  @blur="hideSuggestions"
+                  autocomplete="off"
+                />
+                <div v-if="showSuggestions && filteredSectors.length > 0" class="suggestions-dropdown">
+                  <div 
+                    v-for="sector in filteredSectors" 
+                    :key="sector"
+                    class="suggestion-item"
+                    @mousedown="selectSuggestion(sector)"
+                  >
+                    {{ sector }}
+                  </div>
+                </div>
+              </div>
               <button @click="addCustomSector" class="add-sector-btn">确定</button>
             </div>
           </div>
@@ -115,6 +131,10 @@
       const selectedSector = ref(null);
       const customSectorName = ref('');
       const sectorInfo = ref(null);
+      
+      // 自动完成相关状态
+      const showSuggestions = ref(false);
+      const filteredSectors = ref([]);
       
       // 图表标题 - 只使用配置中的标题，不使用API返回的layout.title以避免重复
       const chartTitle = computed(() => {
@@ -174,6 +194,8 @@
       });
       
       const resizeObserver = ref(null);
+      const intersectionObserver = ref(null);
+      const isVisible = ref(true); // 组件是否在视口内
       
       // 防止重复刷新的控制变量
       let isRefreshing = false;
@@ -281,6 +303,61 @@
       const onSectorChange = () => {
         console.log('板块选择改变:', selectedSector.value);
         loadChartData();
+      };
+      
+      // 自动完成相关方法
+      const onSectorInput = () => {
+        const input = customSectorName.value.trim().toLowerCase();
+        if (!input || !sectorInfo.value || !sectorInfo.value.availableSectors) {
+          filteredSectors.value = [];
+          showSuggestions.value = false;
+          return;
+        }
+        
+        // 过滤匹配的板块 - 显示所有包含关键字的结果
+        const matches = sectorInfo.value.availableSectors
+          .filter(sector => sector.toLowerCase().includes(input))
+          .sort((a, b) => {
+            // 优先显示以输入内容开头的结果
+            const aStartsWith = a.toLowerCase().startsWith(input);
+            const bStartsWith = b.toLowerCase().startsWith(input);
+            if (aStartsWith && !bStartsWith) return -1;
+            if (!aStartsWith && bStartsWith) return 1;
+            // 其次按字符串长度排序（shorter first）
+            return a.length - b.length;
+          });
+        
+        filteredSectors.value = matches.slice(0, 20); // 显示最多20个匹配结果
+        showSuggestions.value = matches.length > 0;
+        
+        console.log(`输入: "${input}", 找到 ${matches.length} 个匹配结果:`, matches);
+      };
+      
+      const selectSuggestion = (sector) => {
+        customSectorName.value = sector;
+        showSuggestions.value = false;
+        filteredSectors.value = [];
+      };
+      
+      const onInputFocus = () => {
+        // 当输入框获得焦点时，如果有输入内容，显示匹配结果
+        if (customSectorName.value.trim()) {
+          onSectorInput();
+        } else {
+          // 如果没有输入内容，显示前20个板块作为提示
+          if (sectorInfo.value && sectorInfo.value.availableSectors) {
+            filteredSectors.value = sectorInfo.value.availableSectors.slice(0, 20);
+            showSuggestions.value = true;
+            console.log('显示前20个板块作为提示');
+          }
+        }
+      };
+      
+      const hideSuggestions = () => {
+        // 延迟隐藏，以便点击建议项能够生效
+        setTimeout(() => {
+          showSuggestions.value = false;
+        }, 200);
       };
       
       // 添加自定义板块
@@ -431,9 +508,16 @@
         console.log('renderChart()开始执行');
         console.log('chartContainer.value:', chartContainer.value);
         console.log('chartData.value:', chartData.value);
+        console.log('isVisible.value:', isVisible.value);
         
         if (!chartContainer.value || !chartData.value) {
           console.warn('图表容器或数据为空，不执行渲染');
+          return;
+        }
+        
+        // 如果组件不在视口内，延迟渲染
+        if (!isVisible.value) {
+          console.log('组件不在视口内，跳过渲染');
           return;
         }
         
@@ -577,13 +661,46 @@
         window.addEventListener('dashboard-update', handleDashboardUpdate);
         window.addEventListener('dashboard-config-updated', handleConfigUpdate);
         
+        // 添加Intersection Observer，检测组件是否在视口内
+        nextTick(() => {
+          if (chartContainer.value) {
+            intersectionObserver.value = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                const wasVisible = isVisible.value;
+                isVisible.value = entry.isIntersecting;
+                
+                // 如果组件从不可见变为可见，重新渲染图表
+                if (!wasVisible && isVisible.value && chartData.value) {
+                  console.log('组件重新进入视口，触发重新渲染');
+                  setTimeout(() => renderChart(), 100);
+                }
+              });
+            }, {
+              rootMargin: '50px', // 提前50px开始加载
+              threshold: 0.1      // 10%可见时触发
+            });
+            
+            intersectionObserver.value.observe(chartContainer.value);
+          }
+        });
+
         // 添加窗口大小变化的响应式处理
         nextTick(() => {
           if (chartContainer.value) {
+            // 使用防抖的ResizeObserver，避免频繁重渲染
+            let resizeTimeout = null;
             resizeObserver.value = new ResizeObserver(() => {
-              if (chartData.value && chartContainer.value) {
-                console.log('检测到大小变化，重新调整图表大小');
-                Plotly.Plots.resize(chartContainer.value);
+              // 只有在组件可见时才响应尺寸变化
+              if (chartData.value && chartContainer.value && isVisible.value) {
+                // 清除之前的定时器
+                if (resizeTimeout) {
+                  clearTimeout(resizeTimeout);
+                }
+                // 延迟执行resize，避免滚动时频繁触发
+                resizeTimeout = setTimeout(() => {
+                  console.log('检测到大小变化，重新调整图表大小');
+                  Plotly.Plots.resize(chartContainer.value);
+                }, 150); // 150ms防抖延迟
               }
             });
             resizeObserver.value.observe(chartContainer.value);
@@ -631,6 +748,11 @@
         if (resizeObserver.value) {
           resizeObserver.value.disconnect();
         }
+        
+        // 清理IntersectionObserver
+        if (intersectionObserver.value) {
+          intersectionObserver.value.disconnect();
+        }
       });
       
       // 监听配置变化，重新加载数据
@@ -654,6 +776,13 @@
         sectorInfo,
         onSectorChange,
         addCustomSector,
+        // 自动完成相关
+        showSuggestions,
+        filteredSectors,
+        onSectorInput,
+        selectSuggestion,
+        onInputFocus,
+        hideSuggestions,
         // 日期范围选择相关
         selectedStartDate,
         selectedEndDate,
@@ -672,28 +801,15 @@
 </script>
   
 <style scoped>
-.chart-wrapper {
-    display: grid;
-    grid-template-areas: "chart";
-    width: 100%;
-    height: 100%;      /* 使用100%高度而不是固定高度 */
-    min-height: 300px; /* 设置最小高度 */
-    overflow: hidden;
-}
-
-.chart-wrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
 /* 图表包装器样式 */
 .chart-wrapper {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
+  min-height: 300px; /* 设置最小高度 */
+  overflow: visible; /* 改为visible，允许下拉框溢出 */
+  position: relative; /* 确保定位上下文 */
 }
 
 /* 图表头部样式 */
@@ -707,6 +823,9 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-height: 40px;
+  position: relative; /* 确保相对定位 */
+  overflow: visible; /* 允许子元素(下拉框)溢出显示 */
+  z-index: 10000; /* 为整个头部设置高z-index */
 }
 
 .chart-title {
@@ -725,6 +844,9 @@
   gap: 15px;
   align-items: center;
   flex-shrink: 0;
+  position: relative; /* 确保相对定位 */
+  overflow: visible; /* 允许子元素(下拉框)溢出显示 */
+  z-index: 10001; /* 比头部稍高 */
 }
 
 .chart-container {
@@ -732,6 +854,7 @@
   width: 100%;
   height: calc(100% - 60px); /* 减去header的高度 */
   position: relative;
+  z-index: 1; /* 确保图表容器在头部之下 */
 }
 
 /* 更全面的深度选择器以控制 Plotly 生成的元素 */
@@ -824,6 +947,9 @@
   gap: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(10px);
+  position: relative; /* 确保相对定位 */
+  overflow: visible; /* 允许子元素溢出显示 */
+  z-index: 10002; /* 比选择器组稍高 */
 }
 
 /* 单日选择器样式 */
@@ -878,6 +1004,12 @@
   gap: 6px;
 }
 
+.autocomplete-container {
+  position: relative;
+  display: inline-block;
+  z-index: 10003; /* 比板块选择器稍高 */
+}
+
 .sector-input {
   padding: 3px 6px;
   border: 1px solid #ced4da;
@@ -893,6 +1025,43 @@
   border-color: #80bdff;
   outline: 0;
   box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.25);
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ced4da;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  max-height: 250px; /* 增加最大高度以显示更多结果 */
+  overflow-y: auto;
+  z-index: 10004; /* 最高层级，确保在所有元素之上 */
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* 增强阴影效果 */
+  min-width: 150px; /* 确保有足够宽度显示板块名称 */
+}
+
+.suggestion-item {
+  padding: 8px 10px; /* 增加内边距 */
+  cursor: pointer;
+  font-size: 11px;
+  color: #495057;
+  border-bottom: 1px solid #f8f9fa;
+  white-space: nowrap; /* 防止文字换行 */
+  overflow: hidden;
+  text-overflow: ellipsis; /* 超长文字显示省略号 */
+  transition: background-color 0.2s ease; /* 添加过渡效果 */
+}
+
+.suggestion-item:hover {
+  background-color: #e9ecef; /* 增强悬停效果 */
+  color: #212529;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
 
 .add-sector-btn {

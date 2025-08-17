@@ -429,6 +429,44 @@
       "description": "板块内股票分钟涨幅",
       "source_data_keys": [],
       "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff": {
+      "component_id": "plate_stocks_change_minute_diff",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff",
+      "api_path": "/api/plate_stocks_change_minute_diff",
+      "position": {
+        "row": 3,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 4
+      },
+      "height": "1200px",
+      "description": "板块内股票分钟涨幅_diff",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 3,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 4
+      },
+      "height": "1200px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom",
+      "source_data_keys": [],
+      "source_data_logic": "",
       "enabled": true,
       "supportsSectorSelection": true
       
@@ -738,6 +776,351 @@
         "description": "只在服务器启动时计算一次"
       }
     }
+  },
+  "market_realtime": {
+ 
+    "plate_stocks_change_daily": {
+      "component_id": "plate_stocks_change_daily",
+      "component_type": "chart",
+      "title": "板块内股票日线涨幅",
+      "api_path": "/api/plate_stocks_change_daily",
+      "position": {
+        "row": 0,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票日线涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute": {
+      "component_id": "plate_stocks_change_minute",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅",
+      "api_path": "/api/plate_stocks_change_minute",
+      "position": {
+        "row": 0,
+        "col": 2,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    
+    "plate_stocks_change_minute_diff": {
+      "component_id": "plate_stocks_change_minute_diff",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff",
+      "api_path": "/api/plate_stocks_change_minute_diff",
+      "position": {
+        "row": 0,
+        "col": 4,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_1": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_1",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_1",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 1,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_1",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_2": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_2",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_2",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 1,
+        "col": 2,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_2",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_3": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_3",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_3",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 1,
+        "col": 4,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_3",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_4": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_4",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_4",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 2,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_4",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_5": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_5",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_5",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 2,
+        "col": 2,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_5",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_6": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_6",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_6",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 2,
+        "col": 4,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_6",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_7": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_7",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_7",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 3,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_7",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_8": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_8",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_8",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 3,
+        "col": 2,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_8",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_9": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_9",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_9",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 3,
+        "col": 4,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_9",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_10": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_10",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_10",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 4,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_10",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "plate_stocks_change_minute_diff_kpl_custom_11": {
+      "component_id": "plate_stocks_change_minute_diff_kpl_custom_11",
+      "component_type": "chart",
+      "title": "板块内股票分钟涨幅_diff_KPL_custom_11",
+      "api_path": "/api/plate_stocks_change_minute_diff_kpl_custom",
+      "position": {
+        "row": 4,
+        "col": 2,
+        "rowSpan": 0,
+        "colSpan": 2
+      },
+      "height": "400px",
+      "description": "板块内股票分钟涨幅_diff_KPL_custom_11",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true
+      
+    },
+    "kpl_2sector_custom_change2_view": {
+      "component_id": "kpl_2sector_custom_change2_view",
+      "component_type": "chart",
+      "title": "开盘啦实时概念涨幅大于2统计",
+      "api_path": "/api/kpl_2sector_custom_change_view",
+      "position": {
+        "row": 5,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 5
+      },
+      "height": "1200px",
+      "description": "开盘啦实时概念涨幅大于2统计",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "supportsSectorSelection": true
+      
+    },
+    "kpl_2sector_custom_change5_view": {
+      "component_id": "kpl_2sector_custom_change5_view",
+      "component_type": "chart",
+      "title": "开盘啦实时概念涨幅大于5统计",
+      "api_path": "/api/kpl_2sector_custom_change_view",
+      "position": {
+        "row": 6,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 5
+      },
+      "height": "1200px",
+      "description": "开盘啦实时概念涨幅大于5统计",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "supportsSectorSelection": true
+      
+    },
+    "strong_plates_change2_factor": {
+      "component_id": "strong_plates_change2_factor",
+      "component_type": "chart",
+      "title": "强势板块涨幅因子",
+      "api_path": "/api/strong_plates_change2_factor",
+      "position": {
+        "row": 7,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 5
+      },
+      "height": "1400px",
+      "description": "强势板块涨幅因子",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": false,
+      "supportsSectorSelection": true 
+    },
+    "strong_plates_change2_factor_pkl": {
+      "component_id": "strong_plates_change2_factor_pkl",
+      "component_type": "chart",
+      "title": "强势板块涨幅因子——pkl",
+      "api_path": "/api/strong_plates_change2_factor_pkl",
+      "position": {
+        "row": 8,
+        "col": 0,
+        "rowSpan": 0,
+        "colSpan": 5
+      },
+      "height": "1400px",
+      "description": "强势板块涨幅因子",
+      "source_data_keys": [],
+      "source_data_logic": "",
+      "enabled": true,
+      "supportsSectorSelection": true 
+    }
+
   },
   "demo": {
     "navigator_organization": {

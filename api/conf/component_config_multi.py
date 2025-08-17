@@ -284,8 +284,8 @@ class ComponentManager:
         
         return {
             "layout": {
-                "rows": 10,
-                "cols": 5,
+                "rows": 20,
+                "cols": 6,  # 修改列数为6列
                 "components": components,
                 "navigator_organization": self.navigator_organization
             }

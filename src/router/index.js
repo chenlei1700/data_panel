@@ -22,11 +22,11 @@ const routes = [
   },
   {
     path: '/multiplate',
-    name: 'multiplate',
+    name: 'stacked_area_demo',
     component: StockDashboard,
     meta: {
       title: '多板块组件演示',
-      apiService: 'multiplate'  // 对应API配置中的键名和components_config.json中的配置
+      apiService: 'stacked_area_demo'  // 对应API配置中的键名，使用端口5007
     }
   },
   {
@@ -36,6 +36,15 @@ const routes = [
     meta: {
       title: '复盘页面',
       apiService: 'market_review'  // 对应API配置中的键名，使用端口5008
+    }
+  },
+  {
+    path: '/market_realtime',
+    name: 'market_realtime',
+    component: StockDashboard,
+    meta: {
+      title: '实时市场',
+      apiService: 'market_realtime'  // 对应API配置中的键名，使用端口5009
     }
   },
 ]

@@ -347,6 +347,7 @@ export default defineComponent({
       // 如果是配置更新或强制刷新，重新加载配置
       if (update.action === 'reload_config' || update.action === 'force_refresh') {
         console.log(`⏱️ [${new Date().toISOString()}] 检测到配置更新，重新加载仪表盘配置...`);
+        
         loadDashboardConfig().then(() => {
           // 配置加载完成后，通知所有组件刷新数据
           console.log(`⏱️ [${new Date().toISOString()}] 配置重新加载完成，通知组件刷新数据...`);
@@ -355,7 +356,8 @@ export default defineComponent({
               detail: { 
                 action: 'reload_config',
                 timestamp: Date.now(),
-                sector_name: update.sector_name
+                sector_name: update.sector_name,
+                selected_date: update.selected_date
               }
             }));
           }, 100);
@@ -496,9 +498,6 @@ export default defineComponent({
           globalRetryCount = 0;  // 重置全局重连计数器
           isReconnecting.value = false;
           lastHeartbeatTime = Date.now();  // 更新心跳时间
-          
-          // 启动连接监控定时器
-          startConnectionMonitor();
         };
         
         // 消息处理
@@ -530,9 +529,6 @@ export default defineComponent({
         eventSource.value.onerror = (error) => {
           console.error(`⏱️ [${new Date().toISOString()}] ${serviceName} SSE连接错误:`, error);
           isConnected.value = false;
-          
-          // 停止连接监控
-          stopConnectionMonitor();
           
           // 检查是否已经在重连，避免重复重连
           if (isReconnecting.value) {
@@ -578,31 +574,209 @@ export default defineComponent({
       }
     };
     
-    // 启动连接监控定时器
-    const startConnectionMonitor = () => {
-      stopConnectionMonitor(); // 先停止现有定时器
-      
-      connectionCheckTimer = setInterval(() => {
-        const currentTime = Date.now();
-        const timeSinceLastHeartbeat = currentTime - lastHeartbeatTime;
+    // 连接到SSE流 - 无间断重连机制
+    
+    // 应用恢复的板块选择
+    const applyRestoredSector = (sectorName) => {
+      try {
+        console.log(`🔄 开始应用恢复的板块选择: ${sectorName}`);
+        let applied = false;
         
-        // 如果超过30秒没有收到心跳，认为连接异常
-        if (timeSinceLastHeartbeat > 30000) {
-          console.warn(`⏱️ [${new Date().toISOString()}] 检测到连接超时 (${timeSinceLastHeartbeat/1000}s)，主动重连...`);
-          isConnected.value = false;
-          connectToUpdateStream();
+        // 方法1: 尝试设置DOM选择器的值
+        const possibleSelectors = [
+          'select[id*="sector"]',
+          'select[id*="plate"]',
+          'input[id*="sector"]', 
+          'input[id*="plate"]',
+          '.sector-selector select',
+          '.plate-selector select',
+          '[data-component="sector-selector"] select',
+          '[data-component="plate-selector"] select'
+        ];
+        
+        for (const selectorPattern of possibleSelectors) {
+          const elements = document.querySelectorAll(selectorPattern);
+          elements.forEach(selector => {
+            // 检查选项中是否有这个板块
+            if (selector.tagName.toLowerCase() === 'select') {
+              const options = selector.querySelectorAll('option');
+              for (const option of options) {
+                if (option.value === sectorName || option.textContent.trim() === sectorName) {
+                  selector.value = option.value;
+                  // 触发change事件
+                  selector.dispatchEvent(new Event('change', { bubbles: true }));
+                  selector.dispatchEvent(new Event('input', { bubbles: true }));
+                  console.log(`✅ 已通过选择器 ${selectorPattern} 恢复板块选择: ${sectorName}`);
+                  applied = true;
+                  break;
+                }
+              }
+            } else if (selector.tagName.toLowerCase() === 'input') {
+              selector.value = sectorName;
+              selector.dispatchEvent(new Event('change', { bubbles: true }));
+              selector.dispatchEvent(new Event('input', { bubbles: true }));
+              console.log(`✅ 已通过输入框恢复板块选择: ${sectorName}`);
+              applied = true;
+            }
+          });
+          
+          if (applied) break;
         }
-      }, 10000); // 每10秒检查一次
+        
+        // 方法2: 如果DOM方式失败，尝试通过SSE发送更新消息
+        if (!applied) {
+          console.log(`🔄 DOM方式失败，尝试通过SSE发送板块更新消息`);
+          
+          // 模拟服务器端的板块更新消息
+          const updateMessage = {
+            action: 'restore_sector',
+            sector_name: sectorName,
+            timestamp: Date.now()
+          };
+          
+          // 直接调用handleDashboardUpdate处理
+          handleDashboardUpdate(updateMessage);
+          applied = true;
+        }
+        
+        if (!applied) {
+          console.warn(`⚠️ 无法应用恢复的板块选择: ${sectorName}`);
+        }
+        
+      } catch (error) {
+        console.warn('应用恢复的板块选择时出错:', error);
+      }
     };
     
-    // 停止连接监控定时器
-    const stopConnectionMonitor = () => {
-      if (connectionCheckTimer) {
-        clearInterval(connectionCheckTimer);
-        connectionCheckTimer = null;
+    // 应用恢复的日期选择
+    const applyRestoredDate = (dateValue) => {
+      try {
+        console.log(`📅 开始应用恢复的日期选择: ${dateValue}`);
+        let applied = false;
+        
+        // 尝试设置各种可能的日期选择器
+        const possibleSelectors = [
+          'input[type="date"]',
+          'input[id*="date"]',
+          '.date-selector input',
+          '[data-component="date-selector"] input'
+        ];
+        
+        for (const selectorPattern of possibleSelectors) {
+          const elements = document.querySelectorAll(selectorPattern);
+          elements.forEach(selector => {
+            selector.value = dateValue;
+            // 触发change事件
+            selector.dispatchEvent(new Event('change', { bubbles: true }));
+            selector.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log(`✅ 已通过选择器 ${selectorPattern} 恢复日期选择: ${dateValue}`);
+            applied = true;
+          });
+          
+          if (applied) break;
+        }
+        
+        if (!applied) {
+          console.warn(`⚠️ 无法应用恢复的日期选择: ${dateValue}`);
+        }
+        
+      } catch (error) {
+        console.warn('应用恢复的日期选择时出错:', error);
       }
-    };    onMounted(() => {
+    };
+    
+    // ===== SSE连接管理功能 =====
+    
+    onMounted(() => {
       console.log(`⏱️ [${new Date().toISOString()}] Dashboard组件挂载，开始初始化...`);
+      
+      // � 在开发环境中加载调试工具
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          // 直接在控制台添加调试功能，避免动态导入问题
+          console.log('🔧 会话状态管理调试工具已加载');
+          
+          // 添加调试函数到window对象
+          window.SessionDebugger = {
+            inspectSelectorElements() {
+              console.log('🔍 检查板块选择器...');
+              const possibleSelectors = [
+                'select[id*="sector"]', 'select[id*="plate"]', 
+                'input[id*="sector"]', 'input[id*="plate"]',
+                '.sector-selector select', '.plate-selector select'
+              ];
+              
+              let found = false;
+              possibleSelectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                if (elements.length > 0) {
+                  console.log(`✅ 找到选择器: ${selector}`);
+                  elements.forEach((el, index) => {
+                    console.log(`  - 元素 ${index + 1}:`, {
+                      tagName: el.tagName, id: el.id, className: el.className, value: el.value,
+                      options: el.tagName === 'SELECT' ? Array.from(el.options).map(opt => opt.value) : null
+                    });
+                  });
+                  found = true;
+                }
+              });
+              
+              if (!found) console.log('❌ 未找到任何板块选择器');
+              return found;
+            },
+            
+            async testSaveState() {
+              console.log('💾 测试保存状态...');
+              if (window.sessionStateManager) {
+                try {
+                  const testState = {
+                    selected_sector: "航运概念",
+                    selected_date: new Date().toISOString().split('T')[0],
+                    component_states: { test: { component_type: 'test', last_interaction: Date.now() } },
+                    page_url: window.location.href, timestamp: Date.now()
+                  };
+                  
+                  console.log('发送状态:', testState);
+                  const result = await window.sessionStateManager.saveUserState(testState);
+                  console.log('保存结果:', result);
+                  return result;
+                } catch (error) {
+                  console.error('保存失败:', error);
+                  return false;
+                }
+              } else {
+                console.error('❌ sessionStateManager 未找到');
+                return false;
+              }
+            },
+            
+            async testRestoreState() {
+              console.log('🔄 测试恢复状态...');
+              if (window.sessionStateManager) {
+                try {
+                  const state = await window.sessionStateManager.getUserState();
+                  console.log('恢复的状态:', state);
+                  return state;
+                } catch (error) {
+                  console.error('恢复失败:', error);
+                  return null;
+                }
+              } else {
+                console.error('❌ sessionStateManager 未找到');
+                return null;
+              }
+            }
+          };
+          
+          console.log('🔧 调试工具: SessionDebugger.inspectSelectorElements(), SessionDebugger.testSaveState(), SessionDebugger.testRestoreState()');
+          
+        } catch (error) {
+          console.warn('调试工具初始化失败:', error);
+        }
+      }
+      
+      // �🔄 会话状态恢复功能 - 在配置加载前先尝试恢复状态
+      console.log(`🔄 [${new Date().toISOString()}] 检查是否需要恢复用户状态...`);
       
       // 立即加载配置，不等待 SSE 连接
       loadDashboardConfig();
@@ -658,9 +832,6 @@ export default defineComponent({
     
     onBeforeUnmount(() => {
       console.log(`⏱️ [${new Date().toISOString()}] Dashboard组件卸载，清理SSE连接...`);
-      
-      // 停止连接监控
-      stopConnectionMonitor();
       
       // 关闭SSE连接
       if (eventSource.value) {
@@ -973,12 +1144,22 @@ export default defineComponent({
 .auto-grid {
   display: grid;
   width: 100%;
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+  /* 优化滚动性能 */
+  contain: layout style paint;
 }
 
 .grid-cell {
   display: flex;
   flex-direction: column;
   overflow: visible;
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+  /* 优化渲染性能 */
+  contain: layout style paint;
+  /* 减少重排重绘 */
+  will-change: transform;
 }
 
 .component-card {

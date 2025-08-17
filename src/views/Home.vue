@@ -76,6 +76,16 @@
           </div>
         </router-link>
 
+        <router-link to="/market_realtime" class="dashboard-card">
+          <div class="card-icon">📊</div>
+          <h3>实时市场</h3>
+          <p>实时市场数据</p>
+          <div class="card-status">
+            <span class="status-dot" :class="{ active: serviceStatus.marketrealtime }"></span>
+            {{ serviceStatus.marketrealtime ? '服务正常' : '服务未启动' }}
+          </div>
+        </router-link>
+
       </div>
     </section>
 
@@ -96,7 +106,7 @@
             <span>API连接</span>
           </div>
           <div class="status-value" :class="{ good: connectedServices > 0, warning: connectedServices === 0 }">
-            {{ connectedServices }}/3 服务在线
+            {{ connectedServices }}/4 服务在线
           </div>
         </div>
         <div class="status-item">
@@ -137,6 +147,7 @@ export default {
       demo1: false,
       stackedareademo: false,
       marketreview: false,
+      marketrealtime: false,
     })
     
     const lastUpdateTime = ref('检查中...')
@@ -147,6 +158,7 @@ export default {
         { key: 'demo1', url: 'http://localhost:5004/health' },
         { key: 'stackedareademo', url: 'http://localhost:5007/health' },
         { key: 'marketreview', url: 'http://localhost:5008/health' },
+        { key: 'marketrealtime', url: 'http://localhost:5009/health' },
       ]
 
       for (const service of services) {

@@ -755,10 +755,21 @@ def print_usage():
     python auto_processor_server_generator.py add market_analysis "市场分析页面" 5009
     python auto_processor_server_generator.py generate-all-with-components
     
+🔄 完整的新服务器生成流程:
+    1. 编辑 project-config.json - 添加新服务配置到 services 数组
+    2. 运行 auto-config-generator.py - 自动生成前端API配置和后端配置文件
+    3. 运行本脚本生成处理器和服务器文件 - 实现具体的业务逻辑
+    4. 修改生成的处理器文件，实现具体的数据处理逻辑
+    
 功能说明:
     - 基础模板：使用processor_template.txt生成简单的处理器框架
     - 组件化生成：基于components_config.json自动生成完整的处理器方法，包含启动缓存支持
     - 支持多种缓存策略：startup_once（启动缓存）、response_cache（响应缓存）、none（无缓存）
+    
+⚠️ 注意事项:
+    - project-config.json: 前端服务配置和路由配置
+    - server_config.json: 后端服务器配置（由auto-config-generator.py生成）
+    - components_config.json: 组件配置（由auto-config-generator.py生成）
     """)
 
 

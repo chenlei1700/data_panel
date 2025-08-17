@@ -41,6 +41,19 @@ export const API_CONFIG = {
     }
   },
 
+  // 实时市场 - 使用端口5009
+  'market_realtime': {
+    baseURL: 'http://localhost:5009',
+    name: '实时市场数据服务',
+    endpoints: {
+      dashboardConfig: '/api/dashboard-config',
+      chartData: '/api/chart-data',
+      tableData: '/api/table-data',
+      updates: '/api/dashboard/updates',
+      health: '/health',
+    }
+  },
+
 }
 
 /**
